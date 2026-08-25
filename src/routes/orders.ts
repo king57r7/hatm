@@ -15,7 +15,7 @@ router.get("/api/orders", async (req, res) => {
       ? await db.select({ id: ordersTable.id, link: ordersTable.link, quantity: ordersTable.quantity, pricePaid: ordersTable.pricePaid, status: ordersTable.status, createdAt: ordersTable.createdAt, service: { name: servicesTable.name }, user: { username: usersTable.username } }).from(ordersTable).leftJoin(servicesTable, eq(ordersTable.serviceId, servicesTable.id)).leftJoin(usersTable, eq(ordersTable.userId, usersTable.id)).orderBy(desc(ordersTable.createdAt)).limit(100)
       : await db.select({ id: ordersTable.id, link: ordersTable.link, quantity: ordersTable.quantity, pricePaid: ordersTable.pricePaid, status: ordersTable.status, createdAt: ordersTable.createdAt, startCount: ordersTable.startCount, remains: ordersTable.remains, service: { name: servicesTable.name, nameAr: servicesTable.nameAr } }).from(ordersTable).leftJoin(servicesTable, eq(ordersTable.serviceId, servicesTable.id)).where(eq(ordersTable.userId, session.userId)).orderBy(desc(ordersTable.createdAt));
     return res.json({ orders });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/orders", async (req, res) => {
@@ -45,7 +45,7 @@ router.post("/api/orders", async (req, res) => {
 
     const [order] = await db.insert(ordersTable).values({ userId: session.userId, serviceId, link, quantity, pricePaid: cost, purchaseCost, profit: cost - purchaseCost, providerOrderId, status: "PENDING" }).returning();
     return res.json({ order });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.get("/api/orders/:id", async (req, res) => {
@@ -64,7 +64,7 @@ router.get("/api/orders/:id", async (req, res) => {
       }
     }
     return res.json({ order });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/orders/:id/refill", async (req, res) => {
@@ -77,7 +77,7 @@ router.post("/api/orders/:id/refill", async (req, res) => {
     const result = await refillProviderOrder(order.providerOrderId, svc?.apiProviderConfigId || undefined);
     if ("error" in result) return res.status(400).json({ error: result.error });
     return res.json({ success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 export default router;
