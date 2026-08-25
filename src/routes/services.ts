@@ -25,7 +25,7 @@ router.get("/api/services", async (req, res) => {
     }
     const categories = [...new Set(services.map((s: any) => s.category))].sort();
     return res.json({ services: services.map((s: any) => ({ ...s, displayPricePerK: s.basePricePerK * multiplier })), categories });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.patch("/api/services/:id", async (req, res) => {
@@ -43,7 +43,7 @@ router.patch("/api/services/:id", async (req, res) => {
     if (b.markupPercent !== undefined) { u.markupPercent = b.markupPercent; u.finalPricePerK = svc.basePricePerK * (1 + b.markupPercent / 100); }
     const [updated] = await db.update(servicesTable).set(u).where(eq(servicesTable.id, req.params.id)).returning();
     return res.json({ service: updated });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.delete("/api/services/:id", async (req, res) => {
@@ -52,7 +52,7 @@ router.delete("/api/services/:id", async (req, res) => {
     if (!session.userId || session.role !== "ADMIN") return res.status(401).json({ error: "Unauthorized" });
     await db.delete(servicesTable).where(eq(servicesTable.id, req.params.id));
     return res.json({ success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/services/add-by-id", async (req, res) => {
@@ -76,7 +76,7 @@ router.post("/api/services/add-by-id", async (req, res) => {
     }
     const [svc] = await db.insert(servicesTable).values({ providerId: ps.service, apiProviderConfigId: apiProviderConfigId || null, name: ps.name, category: ps.category, min: parseInt(ps.min), max: parseInt(ps.max), basePricePerK: base, markupPercent: 0, finalPricePerK: final, refill: ps.refill, cancel: ps.cancel, type: ps.type }).returning();
     return res.json({ service: svc, success: true, action: "created" });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/services/sync", async (req, res) => {
@@ -98,7 +98,7 @@ router.post("/api/services/sync", async (req, res) => {
       else { await db.insert(servicesTable).values({ providerId: ps.service, apiProviderConfigId: apiProviderConfigId || null, name: ps.name, category: ps.category, min: parseInt(ps.min), max: parseInt(ps.max), basePricePerK: base, markupPercent: 0, finalPricePerK: final, refill: ps.refill, cancel: ps.cancel, type: ps.type }); created++; }
     }
     return res.json({ success: true, created, updated });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 export default router;
