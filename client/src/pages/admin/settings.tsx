@@ -8,7 +8,7 @@ export default function AdminSettingsPage() {
   const [newMethod, setNewMethod] = useState({ name: '', nameAr: '', accountInfo: '', currency: 'USD', minAmount: 5, maxAmount: 10000, isActive: true, instructions: '', instructionsAr: '' });
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(true);
-  const [siteName, setSiteName] = useState('HATM');
+  const [siteName, setSiteName] = useState('King');
   const [multiplier, setMultiplier] = useState('1');
   const [markup, setMarkup] = useState('20');
   const [adminForm, setAdminForm] = useState({ email: '', username: '', password: '' });
@@ -20,7 +20,7 @@ export default function AdminSettingsPage() {
   const load = () => {
     setLoading(true);
     fetch('/api/admin/settings', { credentials: 'include' }).then(r => r.json()).then(d => {
-      setSiteName(d.settings?.site_name || 'HATM');
+      setSiteName(d.settings?.site_name || 'King');
       setMultiplier(d.settings?.price_multiplier || '1');
       setMarkup(d.settings?.global_markup || '20');
       setLogoPreview(d.settings?.logo_data || null);
@@ -83,7 +83,7 @@ export default function AdminSettingsPage() {
             <label className="text-gray-400 text-sm block mb-2">{locale === 'ar' ? 'شعار الموقع (Logo)' : 'Site Logo'}</label>
             <div className="flex items-center gap-4">
               <div className="w-20 h-20 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center overflow-hidden">
-                {logoPreview ? <img src={logoPreview} alt="logo" className="w-full h-full object-cover" /> : <span className="text-amber-500 font-black text-3xl">{siteName[0]?.toUpperCase() || 'H'}</span>}
+                {logoPreview ? <img src={logoPreview} alt="logo" className="w-full h-full object-cover" /> : <span className="text-amber-500 font-black text-3xl">{siteName[0]?.toUpperCase() || 'K'}</span>}
               </div>
               <div>
                 <input type="file" ref={logoInputRef} accept="image/*" onChange={handleLogoUpload} className="hidden" />
@@ -96,7 +96,7 @@ export default function AdminSettingsPage() {
           </div>
           <div>
             <label className="text-gray-400 text-sm block mb-2">{locale === 'ar' ? 'اسم الموقع' : 'Site Name'}</label>
-            <input value={siteName} onChange={e => setSiteName(e.target.value)} className="input-field" placeholder="HATM" />
+            <input value={siteName} onChange={e => setSiteName(e.target.value)} className="input-field" placeholder="King" />
           </div>
         </div>
         <button className="btn-primary mt-4" onClick={() => save('settings', { site_name: siteName })}>
