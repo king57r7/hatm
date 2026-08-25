@@ -2,7 +2,7 @@ export type Locale = 'ar' | 'en';
 
 export const messages = {
   ar: {
-    siteName: 'HATM', login: 'تسجيل الدخول', register: 'إنشاء حساب', logout: 'تسجيل الخروج',
+    siteName: 'King', login: 'تسجيل الدخول', register: 'إنشاء حساب', logout: 'تسجيل الخروج',
     email: 'البريد الإلكتروني', username: 'اسم المستخدم', password: 'كلمة المرور',
     loading: 'جارٍ التحميل...', save: 'حفظ', cancel: 'إلغاء', delete: 'حذف', edit: 'تعديل',
     confirm: 'تأكيد', search: 'بحث', noData: 'لا توجد بيانات', error: 'حدث خطأ', success: 'تمت العملية بنجاح',
@@ -28,7 +28,7 @@ export const messages = {
     currency: 'العملة', totalRevenue: 'إجمالي الإيرادات', pendingTopups: 'طلبات شحن معلقة',
   },
   en: {
-    siteName: 'HATM', login: 'Login', register: 'Register', logout: 'Logout',
+    siteName: 'King', login: 'Login', register: 'Register', logout: 'Logout',
     email: 'Email', username: 'Username', password: 'Password', loading: 'Loading...',
     save: 'Save', cancel: 'Cancel', delete: 'Delete', edit: 'Edit', confirm: 'Confirm',
     search: 'Search', noData: 'No data available', error: 'An error occurred', success: 'Operation successful',
