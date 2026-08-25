@@ -31,7 +31,7 @@ router.post("/api/orders", async (req, res) => {
 
     const settingsRaw = await db.select().from(siteSettingsTable);
     const multiplier = parseFloat(Object.fromEntries(settingsRaw.map((s: any) => [s.key, s.value])).price_multiplier || "1");
-    const displayPrice = service.basePricePerK * multiplier;
+    const displayPrice = service.finalPricePerK * multiplier;
     const cost = (displayPrice / 1000) * quantity;
     const purchaseCost = (service.basePricePerK / 1000) * quantity;
 
