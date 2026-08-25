@@ -40,19 +40,32 @@ export default function AdminProvidersPage() {
 
   const testBalance = async (id: string) => {
     setTesting(id);
-    const res = await fetch(`/api/providers/${id}/balance`, { credentials: 'include' });
-    const d = await res.json();
-    setBalances(prev => ({ ...prev, [id]: d.balance || 'Error' }));
-    setTesting(null);
+    try {
+      const res = await fetch(`/api/providers/${id}/balance`, { credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Connection failed');
+      setBalances(prev => ({ ...prev, [id]: data.balance || '—' }));
+    } catch (error) {
+      setMsg(`❌ ${error instanceof Error ? error.message : (locale === 'ar' ? 'تعذر اختبار اتصال المزود' : 'Provider test failed')}`);
+    } finally {
+      setTesting(null);
+    }
   };
 
   const syncServices = async (id: string) => {
     setSyncing(id);
-    const res = await fetch('/api/services/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ apiProviderConfigId: id }) });
-    const d = await res.json();
-    if (res.ok) setMsg(`✅ ${locale === 'ar' ? `مزامنة: ${d.created} جديد، ${d.updated} محدث` : `Synced: ${d.created} new, ${d.updated} updated`}`);
-    else setMsg('❌ ' + d.error);
-    setSyncing(null);
+    setMsg(locale === 'ar' ? 'جارٍ جلب الكتالوج وحفظه محلياً. يمكنك البقاء في الصفحة حتى تكتمل العملية.' : 'Fetching the catalog and saving it locally. You can stay on this page while it finishes.');
+    try {
+      const res = await fetch('/api/services/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ apiProviderConfigId: id }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sync failed');
+      const duration = Number(data.durationMs || 0);
+      setMsg(`✅ ${locale === 'ar' ? `اكتملت المزامنة: ${data.created} جديد، ${data.updated} محدث${data.skipped ? `، ${data.skipped} تم تجاوزها لبيانات غير صالحة` : ''}${duration ? ` خلال ${(duration / 1000).toFixed(1)} ثانية` : ''}` : `Sync complete: ${data.created} new, ${data.updated} updated${data.skipped ? `, ${data.skipped} skipped` : ''}${duration ? ` in ${(duration / 1000).toFixed(1)}s` : ''}`}`);
+    } catch (error) {
+      setMsg(`❌ ${error instanceof Error ? error.message : (locale === 'ar' ? 'تعذرت مزامنة الخدمات' : 'Service sync failed')}`);
+    } finally {
+      setSyncing(null);
+    }
   };
 
   return (
@@ -67,7 +80,7 @@ export default function AdminProvidersPage() {
         </button>
       </div>
 
-      {msg && <div className="card-sm text-sm text-amber-400">{msg}</div>}
+      {msg && <div className="notice-bar">{msg}</div>}
 
       {loading ? <div className="text-center py-8 text-gray-500">Loading...</div> :
         providers.length === 0 ? (
@@ -91,7 +104,7 @@ export default function AdminProvidersPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => testBalance(p.id)} disabled={testing === p.id} className="btn-secondary text-xs px-3 py-1.5">{testing === p.id ? '...' : (locale === 'ar' ? '🔍 اختبار' : '🔍 Test')}</button>
-                <button onClick={() => syncServices(p.id)} disabled={syncing === p.id} className="btn-secondary text-xs px-3 py-1.5">{syncing === p.id ? '...' : (locale === 'ar' ? '🔄 مزامنة' : '🔄 Sync')}</button>
+                <button onClick={() => syncServices(p.id)} disabled={syncing === p.id} className="btn-secondary text-xs px-3 py-1.5">{syncing === p.id ? (locale === 'ar' ? 'جارٍ الحفظ...' : 'Saving...') : (locale === 'ar' ? 'مزامنة الخدمات' : 'Sync services')}</button>
                 <button onClick={() => { setEditing(p); setForm({ name: p.name, apiKey: p.apiKey, baseUrl: p.baseUrl }); setShowForm(true); }} className="btn-secondary text-xs px-3 py-1.5">{locale === 'ar' ? '✏️ تعديل' : '✏️ Edit'}</button>
                 <button onClick={() => toggleActive(p)} className={`text-xs px-3 py-1.5 rounded-lg ${p.isActive ? 'btn-danger' : 'btn-success'}`}>{p.isActive ? (locale === 'ar' ? 'تعطيل' : 'Disable') : (locale === 'ar' ? 'تفعيل' : 'Enable')}</button>
                 <button onClick={() => del(p.id)} className="btn-danger text-xs px-3 py-1.5">🗑️</button>
