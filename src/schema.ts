@@ -1,4 +1,4 @@
-import { pgTable, text, doublePrecision, boolean, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, doublePrecision, boolean, integer, timestamp, pgEnum, uniqueIndex, index } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["USER", "ADMIN"]);
 export const orderStatusEnum = pgEnum("order_status", ["PENDING", "IN_PROGRESS", "COMPLETED", "PARTIAL", "CANCELED", "REFUNDED", "REFILL_AVAILABLE", "FAILED"]);
@@ -37,6 +37,7 @@ export const servicesTable = pgTable("services", {
   categoryAr: text("category_ar"),
   description: text("description"),
   descriptionAr: text("description_ar"),
+  imageUrl: text("image_url"),
   min: integer("min").notNull(),
   max: integer("max").notNull(),
   basePricePerK: doublePrecision("base_price_per_k").notNull(),
@@ -47,8 +48,31 @@ export const servicesTable = pgTable("services", {
   type: text("type"),
   isActive: boolean("is_active").default(true).notNull(),
   isHidden: boolean("is_hidden").default(false).notNull(),
+  isFeatured: boolean("is_featured").default(false).notNull(),
+  featuredOrder: integer("featured_order").default(0).notNull(),
   note: text("note"),
   noteAr: text("note_ar"),
+  syncedAt: timestamp("synced_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  providerSourceUnique: uniqueIndex("services_provider_source_unique").on(table.apiProviderConfigId, table.providerId),
+  featuredLookup: index("services_featured_lookup").on(table.isFeatured, table.featuredOrder),
+}));
+
+export const bannersTable = pgTable("banners", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  title: text("title").notNull(),
+  titleAr: text("title_ar"),
+  subtitle: text("subtitle"),
+  subtitleAr: text("subtitle_ar"),
+  imageUrl: text("image_url"),
+  actionUrl: text("action_url"),
+  actionLabel: text("action_label"),
+  actionLabelAr: text("action_label_ar"),
+  accentColor: text("accent_color").default("#64748b").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
