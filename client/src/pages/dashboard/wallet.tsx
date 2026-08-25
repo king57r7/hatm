@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ArrowUpRight, CheckCircle2, CircleDollarSign, ClipboardCheck, CreditCard, Landmark, WalletCards } from 'lucide-react';
 import { useLang, useAuth } from '../../lib/context';
 
 export default function WalletPage() {
@@ -12,74 +13,34 @@ export default function WalletPage() {
   const [msg, setMsg] = useState('');
 
   const loadData = () => {
-    fetch('/api/wallet/methods', { credentials: 'include' }).then(r => r.json()).then(d => setMethods(d.methods || []));
-    fetch('/api/wallet/topups', { credentials: 'include' }).then(r => r.json()).then(d => setRequests(d.requests || []));
+    fetch('/api/wallet/methods', { credentials: 'include' }).then(response => response.json()).then(data => setMethods(data.methods || []));
+    fetch('/api/wallet/topups', { credentials: 'include' }).then(response => response.json()).then(data => setRequests(data.requests || []));
   };
-
   useEffect(loadData, []);
 
   const submit = async () => {
     if (!selected) return;
-    setSubmitting(true); setMsg('');
-    const res = await fetch('/api/wallet/topup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ paymentMethodId: selected.id, ...form, amount: parseFloat(form.amount) }) });
-    const d = await res.json();
-    if (res.ok) { setMsg('✅ ' + (locale === 'ar' ? 'تم إرسال الطلب، في انتظار الموافقة' : 'Request sent, awaiting approval')); setForm({ amount: '', transactionRef: '', note: '' }); setSelected(null); loadData(); }
-    else setMsg('❌ ' + d.error);
+    setSubmitting(true);
+    setMsg('');
+    const response = await fetch('/api/wallet/topup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ paymentMethodId: selected.id, ...form, amount: parseFloat(form.amount) }) });
+    const data = await response.json();
+    if (response.ok) {
+      setMsg(locale === 'ar' ? 'تم إرسال طلب الشحن بنجاح، بانتظار المراجعة.' : 'Your top-up request was sent and is awaiting review.');
+      setForm({ amount: '', transactionRef: '', note: '' });
+      setSelected(null);
+      loadData();
+    } else setMsg(data.error || t.error);
     setSubmitting(false);
   };
 
-  const statusBadge = (s: string) => ({ PENDING: <span className="badge-pending">{t.pending}</span>, APPROVED: <span className="badge-completed">{t.approved}</span>, REJECTED: <span className="badge-failed">{t.rejected}</span> }[s] || <span>{s}</span>);
+  const statusBadge = (value: string) => ({ PENDING: <span className="badge-pending"><span className="h-1.5 w-1.5 rounded-full bg-current opacity-75" />{t.pending}</span>, APPROVED: <span className="badge-completed"><span className="h-1.5 w-1.5 rounded-full bg-current opacity-75" />{t.approved}</span>, REJECTED: <span className="badge-failed"><span className="h-1.5 w-1.5 rounded-full bg-current opacity-75" />{t.rejected}</span> }[value] || <span>{value}</span>);
 
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">{t.wallet}</h1>
-      <div className="card bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
-        <p className="text-gray-400 text-sm mb-1">{t.balance}</p>
-        <p className="text-4xl font-black text-amber-500">${user?.walletBalance.toFixed(2)}</p>
-      </div>
-      <div className="card">
-        <h2 className="text-lg font-bold text-white mb-4">{t.walletTopup}</h2>
-        {msg && <div className="mb-4 text-sm text-amber-400 bg-amber-500/10 px-4 py-3 rounded-lg">{msg}</div>}
-        {!selected ? (
-          <div className="grid sm:grid-cols-2 gap-3">
-            {methods.map(m => (
-              <button key={m.id} onClick={() => setSelected(m)} className="card-sm hover:border-amber-500/50 transition-colors text-start">
-                <p className="font-semibold text-white">{locale === 'ar' ? m.nameAr : m.name}</p>
-                <p className="text-xs text-gray-500 mt-1">{m.currency} — {locale === 'ar' ? `الحد الأدنى: $${m.minAmount}` : `Min: $${m.minAmount}`}</p>
-                <p className="text-xs text-amber-500 mt-2 font-mono">{m.accountInfo}</p>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="card-sm bg-amber-500/5 border-amber-500/20">
-              <p className="text-amber-500 font-semibold">{locale === 'ar' ? selected.nameAr : selected.name}</p>
-              <p className="text-white font-mono mt-1">{selected.accountInfo}</p>
-              {selected.instructionsAr && <p className="text-gray-400 text-sm mt-2">{locale === 'ar' ? selected.instructionsAr : selected.instructions}</p>}
-            </div>
-            <input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder={`${t.amount} ($${selected.minAmount} - $${selected.maxAmount})`} className="input-field" />
-            <input value={form.transactionRef} onChange={e => setForm({ ...form, transactionRef: e.target.value })} placeholder={t.transactionRef} className="input-field" />
-            <textarea value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} placeholder={t.note} className="input-field h-20 resize-none" />
-            <div className="flex gap-3">
-              <button onClick={() => setSelected(null)} className="btn-secondary flex-1">{t.cancel}</button>
-              <button onClick={submit} disabled={submitting || !form.amount || !form.transactionRef} className="btn-primary flex-1">{submitting ? t.loading : t.confirm}</button>
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="card">
-        <h2 className="text-lg font-bold text-white mb-4">{t.history}</h2>
-        {requests.length === 0 ? <p className="text-gray-500 text-center py-6">{t.noData}</p> :
-          <div className="space-y-2">
-            {requests.map(r => (
-              <div key={r.id} className="card-sm flex justify-between items-center">
-                <div><p className="text-white font-medium">${r.amount}</p><p className="text-xs text-gray-500">{r.transactionRef} • {new Date(r.createdAt).toLocaleDateString()}</p></div>
-                <div className="text-end">{statusBadge(r.status)}{r.creditedAmount && <p className="text-xs text-green-400 mt-1">+${r.creditedAmount}</p>}</div>
-              </div>
-            ))}
-          </div>
-        }
-      </div>
-    </div>
-  );
+  return <div className="page-shell">
+    <div className="page-heading"><div><div className="eyebrow"><span className="eyebrow-dot" />{locale === 'ar' ? 'مركز المدفوعات' : 'Payments center'}</div><h1 className="page-title mt-2">{t.wallet}</h1><p className="page-subtitle">{locale === 'ar' ? 'أدر رصيدك وطلبات الشحن بأمان ووضوح.' : 'Manage balance and top-up requests with clarity and security.'}</p></div></div>
+    <section className="relative overflow-hidden rounded-[1.6rem] border border-[#ffc95c]/20 bg-[linear-gradient(120deg,rgba(113,73,23,.54),rgba(35,29,43,.88)_48%,rgba(40,47,96,.62))] p-6 shadow-[0_22px_56px_rgba(0,0,0,.22)] sm:p-8"><div className="absolute -end-16 -top-20 h-60 w-60 rounded-full bg-[#ffe19a]/13 blur-3xl" /><div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-extrabold uppercase tracking-[.16em] text-[#d7c598]">{t.balance}</p><p className="mono mt-3 text-4xl font-medium tracking-tight text-[#ffe5a4] sm:text-5xl">${user?.walletBalance.toFixed(2)}</p><p className="mt-2 text-sm text-[#c3b88f]">{locale === 'ar' ? 'رصيدك المتاح للطلبات الجديدة.' : 'Your available balance for new orders.'}</p></div><span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#ffc95c]/14 text-[#ffe299] ring-1 ring-[#ffc95c]/20"><WalletCards size={29} /></span></div></section>
+    <section className="grid gap-6 xl:grid-cols-[1.25fr_.75fr]"><article className="card"><div className="mb-5 flex items-start gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#7868ff]/15 text-[#b7adff]"><CreditCard size={19} /></span><div><h2 className="text-lg font-extrabold text-white">{t.walletTopup}</h2><p className="mt-1 text-xs text-[#8d98b7]">{locale === 'ar' ? 'اختر طريقة الدفع ثم أرسل إثبات العملية.' : 'Choose a payment method, then submit your transaction proof.'}</p></div></div>{msg && <div className={`mb-5 flex items-start gap-2 rounded-xl px-4 py-3 text-sm ${msg.includes('بنجاح') || msg.includes('was sent') ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-300/20' : 'bg-rose-400/10 text-rose-200 ring-1 ring-rose-300/20'}`}><CheckCircle2 size={18} className="mt-0.5 shrink-0" />{msg}</div>}
+      {!selected ? <div className="grid gap-3 sm:grid-cols-2">{methods.length === 0 ? <div className="col-span-full rounded-xl border border-dashed border-white/[.1] py-9 text-center text-sm text-[#8590ae]">{locale === 'ar' ? 'لا توجد طرق دفع مفعلة بعد.' : 'No active payment methods yet.'}</div> : methods.map((method, index) => <button key={method.id} onClick={() => { setSelected(method); setMsg(''); }} className="group relative overflow-hidden rounded-2xl border border-white/[.075] bg-white/[.025] p-4 text-start transition-all duration-300 hover:-translate-y-0.5 hover:border-[#ffc95c]/35 hover:bg-[#ffc95c]/[.05]"><span className="absolute -end-6 -top-6 h-20 w-20 rounded-full bg-[#ffc95c]/0 blur-2xl transition-all group-hover:bg-[#ffc95c]/15" /><div className="relative flex items-start justify-between gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[.06] text-[#ffda83]"><Landmark size={17} /></span><span className="text-[10px] font-extrabold uppercase tracking-wider text-[#8f9ab8]">{method.currency}</span></div><p className="relative mt-4 font-extrabold text-white">{locale === 'ar' ? method.nameAr : method.name}</p><p className="relative mt-1 text-xs text-[#8c98b6]">{locale === 'ar' ? `الحد الأدنى: $${method.minAmount}` : `Minimum: $${method.minAmount}`}</p><p className="relative mono mt-3 truncate text-[11px] text-[#ffda83]">{method.accountInfo}</p></button>)}</div> : <div className="space-y-4"><div className="rounded-2xl border border-[#ffc95c]/17 bg-[#ffc95c]/[.055] p-4"><div className="flex items-center justify-between gap-3"><div><p className="font-extrabold text-[#ffe19a]">{locale === 'ar' ? selected.nameAr : selected.name}</p><p className="mono mt-1 text-sm text-white">{selected.accountInfo}</p></div><CircleDollarSign size={20} className="shrink-0 text-[#ffda83]" /></div>{(selected.instructionsAr || selected.instructions) && <p className="mt-3 border-t border-[#ffc95c]/12 pt-3 text-sm leading-6 text-[#c7c6d0]">{locale === 'ar' ? selected.instructionsAr : selected.instructions}</p>}</div><div className="grid gap-4 sm:grid-cols-2"><div><label className="input-label">{t.amount} <span className="font-normal text-[#75809d]">(${selected.minAmount} — ${selected.maxAmount})</span></label><input type="number" value={form.amount} onChange={event => setForm({ ...form, amount: event.target.value })} placeholder="0.00" className="input-field mono" /></div><div><label className="input-label">{t.transactionRef}</label><input value={form.transactionRef} onChange={event => setForm({ ...form, transactionRef: event.target.value })} placeholder={locale === 'ar' ? 'رقم المرجع' : 'Reference number'} className="input-field" /></div></div><div><label className="input-label">{t.note} <span className="font-normal text-[#75809d]">({locale === 'ar' ? 'اختياري' : 'optional'})</span></label><textarea value={form.note} onChange={event => setForm({ ...form, note: event.target.value })} placeholder={locale === 'ar' ? 'أضف أي تفاصيل مساعدة...' : 'Add any helpful details...'} className="input-field min-h-24 resize-y" /></div><div className="flex gap-3"><button onClick={() => setSelected(null)} className="btn-secondary flex-1">{t.cancel}</button><button onClick={submit} disabled={submitting || !form.amount || !form.transactionRef} className="btn-primary flex-1">{submitting ? t.loading : t.confirm}</button></div></div>}</article>
+      <article className="card soft-grid"><div className="flex items-start justify-between"><div><h2 className="text-lg font-extrabold text-white">{locale === 'ar' ? 'كيف يتم الشحن؟' : 'How it works'}</h2><p className="mt-1 text-xs text-[#8d98b7]">{locale === 'ar' ? 'ثلاث خطوات بسيطة وآمنة' : 'Three simple, secure steps'}</p></div><ClipboardCheck size={20} className="text-[#b3a8ff]" /></div><div className="mt-7 space-y-6">{[[1, locale === 'ar' ? 'اختر طريقة الدفع' : 'Choose a payment method'], [2, locale === 'ar' ? 'حوّل المبلغ وأدخل المرجع' : 'Transfer funds and enter your reference'], [3, locale === 'ar' ? 'يتم التحقق وإضافة الرصيد' : 'We verify and credit your balance']].map(([number, text]) => <div key={String(number)} className="flex items-center gap-4"><span className="mono flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7868ff]/15 text-xs font-bold text-[#c5bcff] ring-1 ring-[#7868ff]/20">0{number}</span><p className="text-sm font-bold text-[#c5cce2]">{text}</p></div>)}</div></article></section>
+    <section className="card"><div className="mb-5 flex items-center justify-between"><div><h2 className="text-lg font-extrabold text-white">{t.history}</h2><p className="mt-1 text-xs text-[#8d98b7]">{locale === 'ar' ? 'آخر طلبات شحن الرصيد' : 'Your latest balance requests'}</p></div><ArrowUpRight size={19} className="text-[#ffda83]" /></div>{requests.length === 0 ? <div className="rounded-xl border border-dashed border-white/[.1] py-9 text-center text-sm text-[#8590ae]">{t.noData}</div> : <div className="space-y-2">{requests.map(request => <div key={request.id} className="flex flex-col gap-3 rounded-xl border border-white/[.06] bg-white/[.025] p-4 transition-colors hover:bg-white/[.045] sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#42a5ff]/10 text-[#8cc9ff]"><ArrowUpRight size={18} /></span><div><p className="mono font-medium text-white">${request.amount}</p><p className="mt-1 text-xs text-[#8792b0]">{request.transactionRef} · {new Date(request.createdAt).toLocaleDateString(locale === 'ar' ? 'ar' : 'en-US')}</p></div></div><div className="flex items-center justify-between gap-3 sm:justify-end">{request.creditedAmount && <span className="mono text-sm font-bold text-[#72ecc4]">+${request.creditedAmount}</span>}{statusBadge(request.status)}</div></div>)}</div>}</section>
+  </div>;
 }
