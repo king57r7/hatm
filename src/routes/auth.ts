@@ -13,7 +13,7 @@ router.get("/api/auth/me", async (req, res) => {
     const [user] = await db.select({ id: usersTable.id, email: usersTable.email, username: usersTable.username, role: usersTable.role, walletBalance: usersTable.walletBalance, totalSpent: usersTable.totalSpent, isBlocked: usersTable.isBlocked }).from(usersTable).where(eq(usersTable.id, session.userId)).limit(1);
     if (!user || user.isBlocked) { await session.destroy(); return res.json({ user: null }); }
     return res.json({ user });
-  } catch (err) { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/auth/login", async (req, res) => {
@@ -27,7 +27,7 @@ router.post("/api/auth/login", async (req, res) => {
     session.userId = user.id; session.role = user.role;
     await session.save();
     return res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role, walletBalance: user.walletBalance, totalSpent: user.totalSpent } });
-  } catch (err) { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/auth/register", async (req, res) => {
@@ -42,7 +42,7 @@ router.post("/api/auth/register", async (req, res) => {
     session.userId = user.id; session.role = user.role;
     await session.save();
     return res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role, walletBalance: 0, totalSpent: 0 } });
-  } catch (err) { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/auth/logout", async (req, res) => {
@@ -60,7 +60,7 @@ router.post("/api/auth/change-password", async (req, res) => {
     if (!user || !await bcrypt.compare(currentPassword, user.password)) return res.status(400).json({ error: "Invalid current password" });
     await db.update(usersTable).set({ password: await bcrypt.hash(newPassword, 12), updatedAt: new Date() }).where(eq(usersTable.id, session.userId));
     return res.json({ success: true });
-  } catch (err) { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.get("/api/auth/init", async (req, res) => {
@@ -89,7 +89,7 @@ router.get("/api/auth/init", async (req, res) => {
       { key: "site_name", value: "HATM" }, { key: "global_markup", value: "20" }, { key: "price_multiplier", value: "1" },
     ]).onConflictDoNothing();
     return res.json({ success: true, message: "Initialized. Admin: admin@hatm.com / admin123" });
-  } catch (err) { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 export default router;
