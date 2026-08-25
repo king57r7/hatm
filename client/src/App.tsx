@@ -19,6 +19,7 @@ import AnalyticsPage from './pages/admin/analytics';
 import AdminSettingsPage from './pages/admin/settings';
 import AdminProvidersPage from './pages/admin/providers';
 import AdminSectionsPage from './pages/admin/sections';
+import AdminHomeContentPage from './pages/admin/home-content';
 
 function DashboardRoutes() {
   return (
@@ -43,6 +44,7 @@ function AdminRoutes() {
         <Route path="/admin/users" component={AdminUsersPage} />
         <Route path="/admin/providers" component={AdminProvidersPage} />
         <Route path="/admin/sections" component={AdminSectionsPage} />
+        <Route path="/admin/home-content" component={AdminHomeContentPage} />
         <Route path="/admin/services" component={AdminServicesPage} />
         <Route path="/admin/orders" component={AdminOrdersPage} />
         <Route path="/admin/topups" component={AdminTopupsPage} />
