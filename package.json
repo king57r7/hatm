@@ -27,7 +27,7 @@
   "dependencies": {
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
-    "drizzle-orm": "^0.41.0",
+    "drizzle-orm": "^0.45.0",
     "drizzle-zod": "^0.7.0",
     "express": "^5.1.0",
     "iron-session": "^8.0.4",
