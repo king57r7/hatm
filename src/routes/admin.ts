@@ -143,7 +143,7 @@ router.get("/api/public/settings", async (_req, res) => {
   try {
     const settings = await db.select().from(siteSettingsTable);
     const m = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
-    return res.json({ siteName: m.site_name || "HATM", logo: m.logo_data || null, priceMultiplier: parseFloat(m.price_multiplier || "1") });
+    return res.json({ siteName: m.site_name || "King", logo: m.logo_data || null, priceMultiplier: parseFloat(m.price_multiplier || "1") });
   } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
