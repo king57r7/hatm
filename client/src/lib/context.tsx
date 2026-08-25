@@ -7,19 +7,29 @@ interface AuthContextType { user: User | null; loading: boolean; refresh: () => 
 interface LangContextType { locale: Locale; t: Messages; setLocale: (l: Locale) => void; dir: 'rtl' | 'ltr'; }
 interface SiteContextType { config: SiteConfig; refreshConfig: () => Promise<void>; }
 
+const defaultConfig: SiteConfig = { siteName: 'King', logo: null, priceMultiplier: 1 };
 const AuthContext = createContext<AuthContextType>({ user: null, loading: true, refresh: async () => {}, logout: async () => {} });
 const LangContext = createContext<LangContextType>({ locale: 'ar', t: messages.ar, setLocale: () => {}, dir: 'rtl' });
-const SiteContext = createContext<SiteContextType>({ config: { siteName: 'HATM', logo: null, priceMultiplier: 1 }, refreshConfig: async () => {} });
+const SiteContext = createContext<SiteContextType>({ config: defaultConfig, refreshConfig: async () => {} });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const refresh = useCallback(async () => {
-    try { const r = await fetch('/api/auth/me', { credentials: 'include' }); const d = await r.json(); setUser(d.user || null); }
-    catch { setUser(null); } finally { setLoading(false); }
+    try {
+      const response = await fetch('/api/auth/me', { credentials: 'include' });
+      const data = await response.json();
+      setUser(data.user || null);
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
   const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); setUser(null); window.location.href = '/login';
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    setUser(null);
+    window.location.href = '/login';
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   return <AuthContext.Provider value={{ user, loading, refresh, logout }}>{children}</AuthContext.Provider>;
@@ -27,16 +37,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function LangProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>('ar');
-  useEffect(() => { const s = localStorage.getItem('hatm_lang') as Locale; if (s === 'ar' || s === 'en') setLocaleState(s); }, []);
-  const setLocale = (l: Locale) => { setLocaleState(l); localStorage.setItem('hatm_lang', l); };
+  useEffect(() => {
+    const stored = (localStorage.getItem('king_lang') || localStorage.getItem('hatm_lang')) as Locale;
+    if (stored === 'ar' || stored === 'en') setLocaleState(stored);
+  }, []);
+  const setLocale = (language: Locale) => {
+    setLocaleState(language);
+    localStorage.setItem('king_lang', language);
+    document.documentElement.lang = language;
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+  };
   return <LangContext.Provider value={{ locale, t: messages[locale], setLocale, dir: locale === 'ar' ? 'rtl' : 'ltr' }}>{children}</LangContext.Provider>;
 }
 
 export function SiteProvider({ children }: { children: React.ReactNode }) {
-  const [config, setConfig] = useState<SiteConfig>({ siteName: 'HATM', logo: null, priceMultiplier: 1 });
+  const [config, setConfig] = useState<SiteConfig>(defaultConfig);
   const refreshConfig = useCallback(async () => {
-    try { const r = await fetch('/api/public/settings'); const d = await r.json(); setConfig({ siteName: d.siteName || 'HATM', logo: d.logo || null, priceMultiplier: d.priceMultiplier || 1 }); }
-    catch {}
+    try {
+      const response = await fetch('/api/public/settings');
+      const data = await response.json();
+      const receivedName = typeof data.siteName === 'string' ? data.siteName.trim() : '';
+      const siteName = !receivedName || receivedName.toLowerCase() === 'hatm' ? 'King' : receivedName;
+      setConfig({ siteName, logo: data.logo || null, priceMultiplier: data.priceMultiplier || 1 });
+      document.title = `${siteName} — Smart Growth Panel`;
+    } catch {
+      document.title = 'King — Smart Growth Panel';
+    }
   }, []);
   useEffect(() => { refreshConfig(); }, [refreshConfig]);
   return <SiteContext.Provider value={{ config, refreshConfig }}>{children}</SiteContext.Provider>;
