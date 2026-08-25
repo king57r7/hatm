@@ -29,10 +29,13 @@ export default function AdminSectionsPage() {
   const loadProviderServices = async (providerId: string) => {
     if (!providerId) { setProviderServices([]); return; }
     setLoadingServices(true);
-    const res = await fetch(`/api/providers/${providerId}/services`, { credentials: 'include' });
-    const d = await res.json();
-    setProviderServices(d.services || []);
-    setLoadingServices(false);
+    try {
+      const res = await fetch(`/api/services?admin=true&provider=${encodeURIComponent(providerId)}`, { credentials: 'include' });
+      const data = await res.json();
+      setProviderServices(res.ok ? (data.services || []) : []);
+    } finally {
+      setLoadingServices(false);
+    }
   };
 
   const save = async () => {
@@ -159,14 +162,14 @@ export default function AdminSectionsPage() {
                 <label className="text-gray-400 text-sm block mb-2">{locale === 'ar' ? 'اختر الخدمات' : 'Select Services'}</label>
                 {form.apiProviderConfigId ? (
                   loadingServices ? <p className="text-gray-500 text-sm">Loading...</p> :
-                  providerServices.length === 0 ? <p className="text-gray-500 text-sm">{locale === 'ar' ? 'لا توجد خدمات' : 'No services'}</p> :
+                  providerServices.length === 0 ? <p className="text-gray-500 text-sm">{locale === 'ar' ? 'لا توجد خدمات متزامنة لهذا المزود. نفّذ المزامنة من صفحة المزود أولاً.' : 'No synced services for this provider. Sync it from the provider page first.'}</p> :
                   <div className="max-h-64 overflow-y-auto space-y-1 border border-[#2a2a2a] rounded-lg p-3">
                     {providerServices.map((s: any) => (
-                      <label key={s.service} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#1a1a1a] cursor-pointer">
-                        <input type="checkbox" checked={form.serviceIds.includes(s.service)} onChange={() => toggleServiceId(s.service)} className="accent-amber-500 w-4 h-4" />
-                        <span className="text-gray-500 text-xs w-12">#{s.service}</span>
+                      <label key={s.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-100 cursor-pointer">
+                        <input type="checkbox" checked={form.serviceIds.includes(s.providerId)} onChange={() => toggleServiceId(s.providerId)} className="accent-slate-600 w-4 h-4" />
+                        <span className="text-gray-500 text-xs w-12">#{s.providerId}</span>
                         <span className="text-white text-sm flex-1 truncate">{s.name}</span>
-                        <span className="text-amber-500 text-xs">${parseFloat(s.rate).toFixed(4)}</span>
+                        <span className="text-slate-600 text-xs">${Number(s.displayPricePerK || s.finalPricePerK || 0).toFixed(4)}</span>
                       </label>
                     ))}
                   </div>
