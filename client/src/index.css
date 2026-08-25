@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background-color: #0a0a0a;
+  color: #ffffff;
+  font-family: 'Tajawal', sans-serif;
+  min-height: 100vh;
+}
+
+@layer components {
+  .card { @apply bg-[#111111] border border-[#1f1f1f] rounded-xl p-6; }
+  .card-sm { @apply bg-[#111111] border border-[#1f1f1f] rounded-xl p-4; }
+  .btn-primary { @apply bg-amber-500 hover:bg-amber-600 text-black font-bold px-4 py-2 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer; }
+  .btn-secondary { @apply bg-[#1f1f1f] hover:bg-[#2a2a2a] text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 border border-[#333] cursor-pointer; }
+  .btn-danger { @apply bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition-all duration-200 cursor-pointer; }
+  .btn-success { @apply bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg transition-all duration-200 cursor-pointer; }
+  .input-field { @apply w-full bg-[#1a1a1a] border border-[#2a2a2a] text-white rounded-lg px-4 py-3 focus:outline-none focus:border-amber-500 transition-colors placeholder-gray-600; }
+  .badge-pending { @apply px-2 py-1 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-400; }
+  .badge-progress { @apply px-2 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-400; }
+  .badge-completed { @apply px-2 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400; }
+  .badge-partial { @apply px-2 py-1 rounded-full text-xs font-bold bg-orange-500/20 text-orange-400; }
+  .badge-canceled { @apply px-2 py-1 rounded-full text-xs font-bold bg-gray-500/20 text-gray-400; }
+  .badge-failed { @apply px-2 py-1 rounded-full text-xs font-bold bg-red-500/20 text-red-400; }
+  .badge-refunded { @apply px-2 py-1 rounded-full text-xs font-bold bg-purple-500/20 text-purple-400; }
+  .nav-link { @apply flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-[#1a1a1a] transition-all duration-200 font-medium cursor-pointer; }
+  .nav-link-active { @apply flex items-center gap-3 px-4 py-3 rounded-lg text-black bg-amber-500 font-bold; }
+  .table-header { @apply text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 py-3 text-start; }
+  .table-cell { @apply px-4 py-3 text-sm text-gray-300; }
+  .table-row { @apply border-b border-[#1a1a1a] hover:bg-[#151515] transition-colors; }
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
