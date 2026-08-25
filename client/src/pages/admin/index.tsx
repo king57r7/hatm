@@ -1,50 +1,41 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'wouter';
+import { Activity, ArrowUpRight, CheckCircle2, CircleDollarSign, CreditCard, Loader2, PackageCheck, RefreshCw, UsersRound, WalletCards, XCircle } from 'lucide-react';
 import { useLang } from '../../lib/context';
 
 export default function AdminDashboard() {
   const { t, locale } = useLang();
+  const [, navigate] = useLocation();
   const [stats, setStats] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState('');
+  const [syncMsg, setSyncMsg] = useState<{ text: string; success: boolean } | null>(null);
 
-  useEffect(() => { fetch('/api/admin/stats', { credentials: 'include' }).then(r => r.json()).then(setStats); }, []);
+  useEffect(() => { fetch('/api/admin/stats', { credentials: 'include' }).then(response => response.json()).then(setStats); }, []);
 
   const syncServices = async () => {
-    setSyncing(true); setSyncMsg('');
-    const res = await fetch('/api/services/sync', { method: 'POST', credentials: 'include' });
-    const d = await res.json();
-    if (res.ok) setSyncMsg(`✅ ${locale === 'ar' ? `مزامنة: ${d.created} جديد، ${d.updated} محدث` : `Synced: ${d.created} new, ${d.updated} updated`}`);
-    else setSyncMsg('❌ ' + d.error);
+    setSyncing(true);
+    setSyncMsg(null);
+    const response = await fetch('/api/services/sync', { method: 'POST', credentials: 'include' });
+    const data = await response.json();
+    setSyncMsg(response.ok ? { success: true, text: locale === 'ar' ? `اكتملت المزامنة: ${data.created} جديدة، ${data.updated} محدثة.` : `Sync complete: ${data.created} new, ${data.updated} updated.` } : { success: false, text: data.error || t.error });
     setSyncing(false);
   };
 
   const cards = stats ? [
-    { label: t.totalUsers, value: stats.totalUsers, icon: '👥', color: 'text-blue-400' },
-    { label: t.totalOrders, value: stats.totalOrders, icon: '📦', color: 'text-purple-400' },
-    { label: t.totalProfit, value: `$${(stats.totalProfit || 0).toFixed(2)}`, icon: '💰', color: 'text-green-400' },
-    { label: t.pendingTopups, value: stats.pendingTopUps, icon: '⏳', color: 'text-yellow-400' },
-    { label: locale === 'ar' ? 'إجمالي الأرصدة' : 'Total Wallets', value: `$${(stats.totalWalletBalance || 0).toFixed(2)}`, icon: '💳', color: 'text-amber-500' },
-    { label: locale === 'ar' ? 'إجمالي الإنفاق' : 'Total Spent', value: `$${(stats.totalSpent || 0).toFixed(2)}`, icon: '💸', color: 'text-red-400' },
-    { label: locale === 'ar' ? 'مكتملة' : 'Completed', value: stats.completedOrders, icon: '✅', color: 'text-green-400' },
-    { label: locale === 'ar' ? 'فاشلة' : 'Failed', value: stats.failedOrders, icon: '❌', color: 'text-red-400' },
+    { label: t.totalUsers, value: stats.totalUsers, detail: locale === 'ar' ? 'حساب نشط على المنصة' : 'accounts on the platform', icon: UsersRound, tint: 'from-[#4aa8ff]/20 to-[#5268e7]/5', color: 'text-[#8cc9ff]' },
+    { label: t.totalOrders, value: stats.totalOrders, detail: locale === 'ar' ? 'إجمالي الطلبات المسجلة' : 'orders recorded', icon: PackageCheck, tint: 'from-[#9d7cff]/20 to-[#7649db]/5', color: 'text-[#bfadff]' },
+    { label: t.totalProfit, value: `$${(stats.totalProfit || 0).toFixed(2)}`, detail: locale === 'ar' ? 'صافي أرباح العمليات' : 'net order profit', icon: CircleDollarSign, tint: 'from-[#43d8a4]/20 to-[#238c72]/5', color: 'text-[#72ecc4]' },
+    { label: t.pendingTopups, value: stats.pendingTopUps, detail: locale === 'ar' ? 'بانتظار المراجعة' : 'waiting for review', icon: CreditCard, tint: 'from-[#ffc95c]/20 to-[#f3a638]/5', color: 'text-[#ffda83]' },
+    { label: locale === 'ar' ? 'إجمالي الأرصدة' : 'Total wallets', value: `$${(stats.totalWalletBalance || 0).toFixed(2)}`, detail: locale === 'ar' ? 'رصيد المستخدمين الحالي' : 'current user balance', icon: WalletCards, tint: 'from-[#5ca6ff]/20 to-[#495dc0]/5', color: 'text-[#9acbff]' },
+    { label: locale === 'ar' ? 'إجمالي الإنفاق' : 'Total spent', value: `$${(stats.totalSpent || 0).toFixed(2)}`, detail: locale === 'ar' ? 'قيمة الخدمات المشتراة' : 'purchased service value', icon: Activity, tint: 'from-[#ff7a93]/18 to-[#a33b57]/5', color: 'text-[#ffacbd]' },
+    { label: locale === 'ar' ? 'طلبات مكتملة' : 'Completed orders', value: stats.completedOrders, detail: locale === 'ar' ? 'أوامر تم تنفيذها' : 'completed successfully', icon: CheckCircle2, tint: 'from-[#43d8a4]/20 to-[#238c72]/5', color: 'text-[#72ecc4]' },
+    { label: locale === 'ar' ? 'طلبات فاشلة' : 'Failed orders', value: stats.failedOrders, detail: locale === 'ar' ? 'تحتاج إلى المتابعة' : 'may need attention', icon: XCircle, tint: 'from-[#ff7a93]/18 to-[#a33b57]/5', color: 'text-[#ffacbd]' },
   ] : [];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-white">{t.dashboard}</h1>
-        <button onClick={syncServices} disabled={syncing} className="btn-primary text-sm">{syncing ? t.loading : t.syncServices}</button>
-      </div>
-      {syncMsg && <div className="card-sm text-sm text-amber-400">{syncMsg}</div>}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map((c, i) => (
-          <div key={i} className="card">
-            <span className="text-2xl block mb-3">{c.icon}</span>
-            <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
-            <p className="text-gray-500 text-sm mt-1">{c.label}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <div className="page-shell">
+    <section className="relative overflow-hidden rounded-[1.7rem] border border-white/[.08] bg-[linear-gradient(120deg,rgba(52,40,119,.83),rgba(15,23,44,.88)_52%,rgba(17,92,122,.47))] px-5 py-7 shadow-[0_26px_70px_rgba(0,0,0,.24)] sm:px-8 sm:py-9"><div className="absolute -end-16 -top-24 h-64 w-64 rounded-full bg-[#9a7bff]/20 blur-3xl" /><div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between"><div><div className="eyebrow"><span className="eyebrow-dot" />{locale === 'ar' ? 'مركز القيادة' : 'Command center'}</div><h1 className="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{locale === 'ar' ? 'نظرة شاملة على King' : 'King at a glance'}</h1><p className="mt-2 max-w-xl text-sm leading-6 text-[#b8c4e7]">{locale === 'ar' ? 'راقب الأداء، راجع مؤشرات النمو، وانتقل مباشرة إلى أهم الإجراءات الإدارية.' : 'Monitor performance, review growth signals, and jump directly into your most important admin actions.'}</p></div><div className="flex flex-wrap gap-3"><button onClick={syncServices} disabled={syncing} className="btn-primary">{syncing ? <Loader2 size={17} className="animate-spin" /> : <RefreshCw size={17} />}{syncing ? t.loading : t.syncServices}</button><button onClick={() => navigate('/admin/services')} className="btn-secondary"><span>{locale === 'ar' ? 'إدارة الخدمات' : 'Manage services'}</span><ArrowUpRight size={16} /></button></div></div></section>
+    {syncMsg && <div className={`rounded-2xl px-4 py-3 text-sm ${syncMsg.success ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-300/20' : 'bg-rose-400/10 text-rose-200 ring-1 ring-rose-300/20'}`}>{syncMsg.text}</div>}
+    {!stats ? <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="stat-card"><div className="skeleton h-11 w-11 rounded-2xl" /><div className="skeleton mt-5 h-7 w-20 rounded" /><div className="skeleton mt-3 h-3 w-28 rounded" /></div>)}</div> : <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(({ label, value, detail, icon: Icon, tint, color }) => <article key={label} className="stat-card"><div className="flex items-start justify-between"><span className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${tint} ${color} ring-1 ring-white/10`}><Icon size={21} /></span><span className="h-2 w-2 rounded-full bg-[#51e4ae] shadow-[0_0_12px_rgba(81,228,174,.9)]" /></div><p className={`mono mt-5 text-2xl font-medium tracking-tight ${color}`}>{value}</p><p className="mt-1 text-sm font-extrabold text-white">{label}</p><p className="metric-label">{detail}</p></article>)}</section>}
+    <section className="grid gap-4 md:grid-cols-3"><button onClick={() => navigate('/admin/topups')} className="group card text-start transition-all duration-300 hover:-translate-y-1 hover:border-[#ffc95c]/28"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#ffc95c]/13 text-[#ffda83]"><CreditCard size={20} /></span><h2 className="mt-5 text-base font-extrabold text-white">{locale === 'ar' ? 'راجع طلبات الشحن' : 'Review top-ups'}</h2><p className="mt-2 text-sm leading-6 text-[#8e99b8]">{locale === 'ar' ? 'تحقق من الطلبات المعلّقة واعتمد الرصيد بسرعة.' : 'Review pending requests and credit balances quickly.'}</p><span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-[#ffda83]">{locale === 'ar' ? 'فتح الطلبات' : 'Open requests'}<ArrowUpRight size={15} /></span></button><button onClick={() => navigate('/admin/analytics')} className="group card text-start transition-all duration-300 hover:-translate-y-1 hover:border-[#a99fff]/28"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#7868ff]/13 text-[#bdb5ff]"><Activity size={20} /></span><h2 className="mt-5 text-base font-extrabold text-white">{locale === 'ar' ? 'حلّل الأداء' : 'Analyze performance'}</h2><p className="mt-2 text-sm leading-6 text-[#8e99b8]">{locale === 'ar' ? 'تابع الإيرادات والطلبات وأبرز المستخدمين.' : 'Track revenue, order activity, and top customers.'}</p><span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-[#bdb5ff]">{locale === 'ar' ? 'عرض التحليلات' : 'Open analytics'}<ArrowUpRight size={15} /></span></button><button onClick={() => navigate('/admin/users')} className="group card text-start transition-all duration-300 hover:-translate-y-1 hover:border-[#76c8ff]/28"><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#42a5ff]/13 text-[#91cbff]"><UsersRound size={20} /></span><h2 className="mt-5 text-base font-extrabold text-white">{locale === 'ar' ? 'إدارة المستخدمين' : 'Manage users'}</h2><p className="mt-2 text-sm leading-6 text-[#8e99b8]">{locale === 'ar' ? 'راجع الحسابات والأرصدة وحالات الوصول.' : 'Review accounts, balances, and access status.'}</p><span className="mt-5 inline-flex items-center gap-1 text-xs font-bold text-[#91cbff]">{locale === 'ar' ? 'فتح المستخدمين' : 'Open users'}<ArrowUpRight size={15} /></span></button></section>
+  </div>;
 }
