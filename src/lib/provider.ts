@@ -50,8 +50,16 @@ function providerErrorMessage(error: unknown) {
 
 async function apiPost(baseUrl: string, apiKey: string, params: Record<string, unknown>) {
   try {
-    const res = await axios.post(normalizeProviderUrl(baseUrl), null, {
-      params: { key: apiKey, ...params },
+    // BoostProvider expects API parameters in the POST body as form-urlencoded data.
+    // Sending them as URL query parameters makes the provider return { error: "Incorrect request" }.
+    const body = new URLSearchParams();
+    body.set("key", apiKey);
+    for (const [name, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) body.set(name, String(value));
+    }
+
+    const res = await axios.post(normalizeProviderUrl(baseUrl), body, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       timeout: PROVIDER_TIMEOUT_MS,
       maxContentLength: 15 * 1024 * 1024,
       maxBodyLength: 15 * 1024 * 1024,
