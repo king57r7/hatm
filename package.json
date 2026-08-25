@@ -1,7 +1,7 @@
 {
-  "name": "hatm-smm",
+  "name": "king-smm-panel",
   "version": "1.0.0",
-  "description": "HATM - Arabic/English SMM Panel",
+  "description": "King - Modern Arabic/English SMM Growth Panel",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
