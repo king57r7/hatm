@@ -11,6 +11,7 @@ import walletRouter from "./routes/wallet.js";
 import adminRouter from "./routes/admin.js";
 import providersRouter from "./routes/providers.js";
 import sectionsRouter from "./routes/sections.js";
+import homeRouter from "./routes/home.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,6 +36,7 @@ app.use(walletRouter);
 app.use(adminRouter);
 app.use(providersRouter);
 app.use(sectionsRouter);
+app.use(homeRouter);
 
 // frontend build
 const clientDist = path.join(__dirname, "..", "client", "dist");
