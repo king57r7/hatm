@@ -17,7 +17,7 @@ router.get("/api/providers", async (req, res) => {
     if (!await requireAdmin(req, res)) return;
     const providers = await db.select().from(apiProviderConfigsTable).orderBy(apiProviderConfigsTable.createdAt);
     return res.json({ providers });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/providers", async (req, res) => {
@@ -27,7 +27,7 @@ router.post("/api/providers", async (req, res) => {
     if (!name || !apiKey || !baseUrl) return res.status(400).json({ error: "All fields required" });
     const [provider] = await db.insert(apiProviderConfigsTable).values({ name, apiKey, baseUrl }).returning();
     return res.json({ provider, success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.patch("/api/providers/:id", async (req, res) => {
@@ -41,7 +41,7 @@ router.patch("/api/providers/:id", async (req, res) => {
     if (isActive !== undefined) u.isActive = isActive;
     const [provider] = await db.update(apiProviderConfigsTable).set(u).where(eq(apiProviderConfigsTable.id, req.params.id)).returning();
     return res.json({ provider, success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.delete("/api/providers/:id", async (req, res) => {
@@ -49,7 +49,7 @@ router.delete("/api/providers/:id", async (req, res) => {
     if (!await requireAdmin(req, res)) return;
     await db.delete(apiProviderConfigsTable).where(eq(apiProviderConfigsTable.id, req.params.id));
     return res.json({ success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.get("/api/providers/:id/services", async (req, res) => {
@@ -57,7 +57,7 @@ router.get("/api/providers/:id/services", async (req, res) => {
     if (!await requireAdmin(req, res)) return;
     const services = await fetchProviderServices(req.params.id);
     return res.json({ services });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.get("/api/providers/:id/balance", async (req, res) => {
@@ -65,7 +65,7 @@ router.get("/api/providers/:id/balance", async (req, res) => {
     if (!await requireAdmin(req, res)) return;
     const balance = await getProviderBalance(req.params.id);
     return res.json({ balance });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 export default router;
