@@ -27,7 +27,7 @@ router.get("/api/admin/stats", async (req, res) => {
       db.select({ count: count() }).from(topUpRequestsTable).where(eq(topUpRequestsTable.status, "PENDING")),
     ]);
     return res.json({ totalUsers: tu[0]?.count || 0, totalWalletBalance: parseFloat(wa[0]?.total || "0"), totalSpent: parseFloat(sa[0]?.total || "0"), totalOrders: to[0]?.count || 0, completedOrders: co[0]?.count || 0, failedOrders: fo[0]?.count || 0, pendingOrders: po[0]?.count || 0, totalProfit: parseFloat(pa[0]?.total || "0"), pendingTopUps: pt[0]?.count || 0 });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.get("/api/admin/users", async (req, res) => {
@@ -37,7 +37,7 @@ router.get("/api/admin/users", async (req, res) => {
     const where = search ? or(ilike(usersTable.username, `%${search}%`), ilike(usersTable.email, `%${search}%`)) : undefined;
     const users = await db.select({ id: usersTable.id, email: usersTable.email, username: usersTable.username, role: usersTable.role, isBlocked: usersTable.isBlocked, walletBalance: usersTable.walletBalance, totalSpent: usersTable.totalSpent, createdAt: usersTable.createdAt }).from(usersTable).where(where).orderBy(desc(usersTable.createdAt)).limit(50);
     return res.json({ users });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.patch("/api/admin/users/:id", async (req, res) => {
@@ -50,7 +50,7 @@ router.patch("/api/admin/users/:id", async (req, res) => {
     if (b.password) u.password = await bcrypt.hash(b.password, 12);
     const [user] = await db.update(usersTable).set(u).where(eq(usersTable.id, req.params.id)).returning();
     return res.json({ user, success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.delete("/api/admin/users/:id", async (req, res) => {
@@ -58,7 +58,7 @@ router.delete("/api/admin/users/:id", async (req, res) => {
     if (!await requireAdmin(req, res)) return;
     await db.delete(usersTable).where(eq(usersTable.id, req.params.id));
     return res.json({ success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/admin/create-admin", async (req, res) => {
@@ -70,7 +70,7 @@ router.post("/api/admin/create-admin", async (req, res) => {
     if (existing.length > 0) return res.status(409).json({ error: "Email or username already taken" });
     const [user] = await db.insert(usersTable).values({ email, username, password: await bcrypt.hash(password, 12), role: "ADMIN" }).returning();
     return res.json({ user: { id: user.id, email: user.email, username: user.username, role: user.role }, success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.get("/api/admin/topups", async (req, res) => {
@@ -78,7 +78,7 @@ router.get("/api/admin/topups", async (req, res) => {
     if (!await requireAdmin(req, res)) return;
     const requests = await db.select({ id: topUpRequestsTable.id, userId: topUpRequestsTable.userId, amount: topUpRequestsTable.amount, transactionRef: topUpRequestsTable.transactionRef, note: topUpRequestsTable.note, status: topUpRequestsTable.status, creditedAmount: topUpRequestsTable.creditedAmount, reviewedAt: topUpRequestsTable.reviewedAt, createdAt: topUpRequestsTable.createdAt, user: { username: usersTable.username, email: usersTable.email }, paymentMethod: { name: paymentMethodsTable.name, nameAr: paymentMethodsTable.nameAr } }).from(topUpRequestsTable).leftJoin(usersTable, eq(topUpRequestsTable.userId, usersTable.id)).leftJoin(paymentMethodsTable, eq(topUpRequestsTable.paymentMethodId, paymentMethodsTable.id)).where(req.query.status ? eq(topUpRequestsTable.status, req.query.status as any) : undefined).orderBy(desc(topUpRequestsTable.createdAt)).limit(100);
     return res.json({ requests });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.patch("/api/admin/topups/:id", async (req, res) => {
@@ -97,7 +97,7 @@ router.patch("/api/admin/topups/:id", async (req, res) => {
       await db.update(topUpRequestsTable).set({ status: "REJECTED", reviewedAt: new Date(), reviewedBy: session.userId, updatedAt: new Date() }).where(eq(topUpRequestsTable.id, req.params.id));
     }
     return res.json({ success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.get("/api/admin/settings", async (req, res) => {
@@ -109,7 +109,7 @@ router.get("/api/admin/settings", async (req, res) => {
       db.select().from(paymentMethodsTable),
     ]);
     return res.json({ settings: Object.fromEntries(settings.map((s: any) => [s.key, s.value])), apiConfigs, paymentMethods });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/admin/settings", async (req, res) => {
@@ -125,7 +125,7 @@ router.post("/api/admin/settings", async (req, res) => {
       else await db.insert(paymentMethodsTable).values(data);
     }
     return res.json({ success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/admin/upload-logo", async (req, res) => {
@@ -136,7 +136,7 @@ router.post("/api/admin/upload-logo", async (req, res) => {
     if (logoData.length > 2 * 1024 * 1024) return res.status(400).json({ error: "Logo too large (max 2MB)" });
     await db.insert(siteSettingsTable).values({ key: "logo_data", value: logoData }).onConflictDoUpdate({ target: siteSettingsTable.key, set: { value: logoData, updatedAt: new Date() } });
     return res.json({ success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.get("/api/public/settings", async (_req, res) => {
@@ -144,7 +144,7 @@ router.get("/api/public/settings", async (_req, res) => {
     const settings = await db.select().from(siteSettingsTable);
     const m = Object.fromEntries(settings.map((s: any) => [s.key, s.value]));
     return res.json({ siteName: m.site_name || "HATM", logo: m.logo_data || null, priceMultiplier: parseFloat(m.price_multiplier || "1") });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.get("/api/admin/analytics", async (req, res) => {
@@ -158,7 +158,7 @@ router.get("/api/admin/analytics", async (req, res) => {
     const dailyMap: Record<string, { revenue: number; profit: number }> = {};
     for (const o of allOrders as any[]) { const d = o.createdAt.toISOString().split("T")[0]; if (!dailyMap[d]) dailyMap[d] = { revenue: 0, profit: 0 }; dailyMap[d].revenue += o.pricePaid; dailyMap[d].profit += o.profit; }
     return res.json({ recentOrders, topUsers, dailyData: Object.entries(dailyMap).map(([date, v]) => ({ date, ...v })) });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 export default router;
