@@ -2,9 +2,17 @@ import { Router } from "express";
 import { db, sectionsTable, servicesTable, siteSettingsTable } from "../db.js";
 import { eq, asc, and, inArray } from "drizzle-orm";
 import { getSession } from "../lib/session.js";
-import { fetchProviderServices, fetchProviderServicesByIds } from "../lib/provider.js";
 
 const router = Router();
+
+function parseServiceIds(value: string) {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed) ? parsed.map(Number).filter(Number.isInteger) : [];
+  } catch {
+    return [];
+  }
+}
 
 router.get("/api/sections", async (req, res) => {
   try {
@@ -15,7 +23,10 @@ router.get("/api/sections", async (req, res) => {
       ? await db.select().from(sectionsTable).orderBy(asc(sectionsTable.displayOrder))
       : await db.select().from(sectionsTable).where(eq(sectionsTable.isVisible, true)).orderBy(asc(sectionsTable.displayOrder));
     return res.json({ sections });
-  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 router.post("/api/sections", async (req, res) => {
@@ -24,30 +35,48 @@ router.post("/api/sections", async (req, res) => {
     if (!session.userId || session.role !== "ADMIN") return res.status(401).json({ error: "Unauthorized" });
     const { name, nameAr, icon, color, description, descriptionAr, apiProviderConfigId, serviceMode, serviceIds, displayOrder } = req.body;
     if (!name || !nameAr) return res.status(400).json({ error: "Name required in both languages" });
-    const [section] = await db.insert(sectionsTable).values({ name, nameAr, icon: icon || "🌐", color: color || "#f59e0b", description, descriptionAr, apiProviderConfigId: apiProviderConfigId || null, serviceMode: serviceMode || "selected", serviceIds: JSON.stringify(Array.isArray(serviceIds) ? serviceIds : []), displayOrder: displayOrder || 0 }).returning();
+    const [section] = await db.insert(sectionsTable).values({
+      name,
+      nameAr,
+      icon: icon || "🌐",
+      color: color || "#f59e0b",
+      description,
+      descriptionAr,
+      apiProviderConfigId: apiProviderConfigId || null,
+      serviceMode: serviceMode || "selected",
+      serviceIds: JSON.stringify(Array.isArray(serviceIds) ? serviceIds.map(Number).filter(Number.isInteger) : []),
+      displayOrder: Number.isFinite(Number(displayOrder)) ? Number(displayOrder) : 0,
+    }).returning();
     return res.json({ section, success: true });
-  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 router.patch("/api/sections/:id", async (req, res) => {
   try {
     const session = await getSession(req, res);
     if (!session.userId || session.role !== "ADMIN") return res.status(401).json({ error: "Unauthorized" });
-    const b = req.body; const u: any = { updatedAt: new Date() };
-    if (b.name !== undefined) u.name = b.name;
-    if (b.nameAr !== undefined) u.nameAr = b.nameAr;
-    if (b.icon !== undefined) u.icon = b.icon;
-    if (b.color !== undefined) u.color = b.color;
-    if (b.description !== undefined) u.description = b.description;
-    if (b.descriptionAr !== undefined) u.descriptionAr = b.descriptionAr;
-    if (b.apiProviderConfigId !== undefined) u.apiProviderConfigId = b.apiProviderConfigId || null;
-    if (b.serviceMode !== undefined) u.serviceMode = b.serviceMode;
-    if (b.serviceIds !== undefined) u.serviceIds = JSON.stringify(Array.isArray(b.serviceIds) ? b.serviceIds : []);
-    if (b.displayOrder !== undefined) u.displayOrder = b.displayOrder;
-    if (b.isVisible !== undefined) u.isVisible = b.isVisible;
-    const [section] = await db.update(sectionsTable).set(u).where(eq(sectionsTable.id, req.params.id)).returning();
+    const body = req.body;
+    const updates: any = { updatedAt: new Date() };
+    if (body.name !== undefined) updates.name = body.name;
+    if (body.nameAr !== undefined) updates.nameAr = body.nameAr;
+    if (body.icon !== undefined) updates.icon = body.icon;
+    if (body.color !== undefined) updates.color = body.color;
+    if (body.description !== undefined) updates.description = body.description;
+    if (body.descriptionAr !== undefined) updates.descriptionAr = body.descriptionAr;
+    if (body.apiProviderConfigId !== undefined) updates.apiProviderConfigId = body.apiProviderConfigId || null;
+    if (body.serviceMode !== undefined) updates.serviceMode = body.serviceMode;
+    if (body.serviceIds !== undefined) updates.serviceIds = JSON.stringify(Array.isArray(body.serviceIds) ? body.serviceIds.map(Number).filter(Number.isInteger) : []);
+    if (body.displayOrder !== undefined && Number.isFinite(Number(body.displayOrder))) updates.displayOrder = Number(body.displayOrder);
+    if (body.isVisible !== undefined) updates.isVisible = Boolean(body.isVisible);
+    const [section] = await db.update(sectionsTable).set(updates).where(eq(sectionsTable.id, req.params.id)).returning();
     return res.json({ section, success: true });
-  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 router.delete("/api/sections/:id", async (req, res) => {
@@ -56,7 +85,10 @@ router.delete("/api/sections/:id", async (req, res) => {
     if (!session.userId || session.role !== "ADMIN") return res.status(401).json({ error: "Unauthorized" });
     await db.delete(sectionsTable).where(eq(sectionsTable.id, req.params.id));
     return res.json({ success: true });
-  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 router.get("/api/sections/:id/services", async (req, res) => {
@@ -68,24 +100,25 @@ router.get("/api/sections/:id/services", async (req, res) => {
     if (!section.isVisible && session.role !== "ADMIN") return res.status(403).json({ error: "Forbidden" });
 
     const settingsRaw = await db.select().from(siteSettingsTable);
-    const settingsMap = Object.fromEntries(settingsRaw.map((s: any) => [s.key, s.value]));
-    const multiplier = parseFloat(settingsMap.price_multiplier || "1");
-    let services: any[] = [];
-
-    if (section.apiProviderConfigId) {
-      const raw = section.serviceMode === "all"
-        ? await fetchProviderServices(section.apiProviderConfigId)
-        : await fetchProviderServicesByIds(JSON.parse(section.serviceIds || "[]"), section.apiProviderConfigId);
-      services = raw.map((s: any) => ({ id: `provider-${s.service}`, providerId: s.service, name: s.name, category: s.category, min: parseInt(s.min), max: parseInt(s.max), finalPricePerK: parseFloat(s.rate) * multiplier, basePricePerK: parseFloat(s.rate), refill: s.refill, cancel: s.cancel, type: s.type, isActive: true, fromProvider: true, apiProviderConfigId: section.apiProviderConfigId }));
-    } else {
-      const ids: number[] = JSON.parse(section.serviceIds || "[]");
-      if (ids.length > 0) {
-        const dbSvcs = await db.select().from(servicesTable).where(and(inArray(servicesTable.providerId, ids), eq(servicesTable.isActive, true)));
-        services = dbSvcs.map((s: any) => ({ ...s, finalPricePerK: s.basePricePerK * multiplier }));
-      }
+    const multiplier = Math.max(0, Number(Object.fromEntries(settingsRaw.map(setting => [setting.key, setting.value])).price_multiplier || "1"));
+    const selectedProviderIds = parseServiceIds(section.serviceIds);
+    const conditions: any[] = [eq(servicesTable.isActive, true), eq(servicesTable.isHidden, false)];
+    if (section.apiProviderConfigId) conditions.push(eq(servicesTable.apiProviderConfigId, section.apiProviderConfigId));
+    if (section.serviceMode !== "all") {
+      if (!selectedProviderIds.length) return res.json({ services: [], section, catalogSynced: true });
+      conditions.push(inArray(servicesTable.providerId, selectedProviderIds));
     }
-    return res.json({ services, section });
-  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
+
+    const services = await db.select().from(servicesTable).where(and(...conditions));
+    return res.json({
+      services: services.map(service => ({ ...service, finalPricePerK: service.finalPricePerK * multiplier })),
+      section,
+      catalogSynced: true,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 export default router;
