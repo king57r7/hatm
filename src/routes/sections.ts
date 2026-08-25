@@ -15,7 +15,7 @@ router.get("/api/sections", async (req, res) => {
       ? await db.select().from(sectionsTable).orderBy(asc(sectionsTable.displayOrder))
       : await db.select().from(sectionsTable).where(eq(sectionsTable.isVisible, true)).orderBy(asc(sectionsTable.displayOrder));
     return res.json({ sections });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.post("/api/sections", async (req, res) => {
@@ -26,7 +26,7 @@ router.post("/api/sections", async (req, res) => {
     if (!name || !nameAr) return res.status(400).json({ error: "Name required in both languages" });
     const [section] = await db.insert(sectionsTable).values({ name, nameAr, icon: icon || "🌐", color: color || "#f59e0b", description, descriptionAr, apiProviderConfigId: apiProviderConfigId || null, serviceMode: serviceMode || "selected", serviceIds: JSON.stringify(Array.isArray(serviceIds) ? serviceIds : []), displayOrder: displayOrder || 0 }).returning();
     return res.json({ section, success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.patch("/api/sections/:id", async (req, res) => {
@@ -47,7 +47,7 @@ router.patch("/api/sections/:id", async (req, res) => {
     if (b.isVisible !== undefined) u.isVisible = b.isVisible;
     const [section] = await db.update(sectionsTable).set(u).where(eq(sectionsTable.id, req.params.id)).returning();
     return res.json({ section, success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.delete("/api/sections/:id", async (req, res) => {
@@ -56,7 +56,7 @@ router.delete("/api/sections/:id", async (req, res) => {
     if (!session.userId || session.role !== "ADMIN") return res.status(401).json({ error: "Unauthorized" });
     await db.delete(sectionsTable).where(eq(sectionsTable.id, req.params.id));
     return res.json({ success: true });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 router.get("/api/sections/:id/services", async (req, res) => {
@@ -85,7 +85,7 @@ router.get("/api/sections/:id/services", async (req, res) => {
       }
     }
     return res.json({ services, section });
-  } catch { return res.status(500).json({ error: "Internal server error" }); }
+  } catch (err) { console.error(err); return res.status(500).json({ error: "Internal server error" }); }
 });
 
 export default router;
