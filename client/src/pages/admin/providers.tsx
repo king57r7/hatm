@@ -58,7 +58,7 @@ export default function AdminProvidersPage() {
     try {
       const res = await fetch('/api/services/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ apiProviderConfigId: id }) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail ? `${data.error} — ${data.detail}` : (data.error || 'Sync failed'));
+      if (!res.ok) throw new Error(data.error || 'Sync failed');
       const duration = Number(data.durationMs || 0);
       setMsg(`✅ ${locale === 'ar' ? `اكتملت المزامنة: ${data.created} جديد، ${data.updated} محدث${data.skipped ? `، ${data.skipped} تم تجاوزها لبيانات غير صالحة` : ''}${duration ? ` خلال ${(duration / 1000).toFixed(1)} ثانية` : ''}` : `Sync complete: ${data.created} new, ${data.updated} updated${data.skipped ? `, ${data.skipped} skipped` : ''}${duration ? ` in ${(duration / 1000).toFixed(1)}s` : ''}`}`);
     } catch (error) {
