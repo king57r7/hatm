@@ -173,14 +173,31 @@ router.get("/api/services", async (req, res) => {
       ));
     }
 
-    const [services, allCategories] = await Promise.all([
-      conditions.length ? db.select().from(servicesTable).where(and(...conditions)) : db.select().from(servicesTable),
+    // Pagination: admin panel can hold tens of thousands of rows after a provider sync,
+    // so we never return the full table in one response — that's what was freezing the tab.
+    const pageSize = adminView ? Math.min(200, Math.max(1, validNumber(req.query.pageSize, 60))) : 500;
+    const page = Math.max(1, Math.trunc(validNumber(req.query.page, 1)));
+    const offset = (page - 1) * pageSize;
+
+    const whereClause = conditions.length ? and(...conditions) : undefined;
+    const baseQuery = whereClause ? db.select().from(servicesTable).where(whereClause) : db.select().from(servicesTable);
+    const countQuery = whereClause
+      ? db.select({ count: sql<number>`count(*)::int` }).from(servicesTable).where(whereClause)
+      : db.select({ count: sql<number>`count(*)::int` }).from(servicesTable);
+
+    const [services, allCategories, [{ count: total }]] = await Promise.all([
+      baseQuery.limit(pageSize).offset(offset),
       db.select({ category: servicesTable.category }).from(servicesTable),
+      countQuery,
     ]);
     const categories = [...new Set(allCategories.map(service => service.category))].sort();
     return res.json({
       services: services.map(service => ({ ...service, displayPricePerK: service.finalPricePerK * multiplier })),
       categories,
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
     });
   } catch (err) {
     console.error(err);
