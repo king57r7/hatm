@@ -21,11 +21,28 @@ export default function SectionServicesPage() {
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
-    if (!params.id) return;
+    // حاول الحصول على الـ ID من params
+    let sectionId = params.id;
+    
+    // إذا ما اشتغل، حاول من الـ URL مباشرة
+    if (!sectionId) {
+      const pathParts = window.location.pathname.split('/');
+      sectionId = pathParts[pathParts.length - 1];
+    }
+    
+    console.log('Section ID:', sectionId);
+    
+    if (!sectionId) {
+      console.warn('No section ID found');
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
-    fetch(`/api/sections/${params.id}/services`, { credentials: 'include' })
+    fetch(`/api/sections/${sectionId}/services`, { credentials: 'include' })
       .then(response => response.json())
       .then(data => {
+        console.log('Data loaded:', data);
         setSection(data.section || null);
         setServices(data.services || []);
       })
@@ -79,7 +96,25 @@ export default function SectionServicesPage() {
   };
 
   const BackIcon = dir === 'rtl' ? ArrowRight : ArrowLeft;
+  
   if (loading) return <div className="flex items-center justify-center py-28"><div className="king-spinner" /></div>;
+  
+  // إذا ما فيش بيانات
+  if (!section || !services || services.length === 0) {
+    return (
+      <div className="page-shell">
+        <div className="page-heading">
+          <button onClick={() => navigate('/dashboard/services')} className="icon-button mt-1" aria-label="Back"><BackIcon size={18} /></button>
+        </div>
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="text-6xl">📭</div>
+          <h2 className="text-2xl font-bold text-white">{locale === 'ar' ? 'لا توجد خدمات' : 'No services'}</h2>
+          <p className="text-[#a9b5d4]">{locale === 'ar' ? 'لا توجد خدمات متاحة في هذا القسم' : 'No services available in this section'}</p>
+          <button onClick={() => navigate('/dashboard/services')} className="btn-primary mt-4">{locale === 'ar' ? 'العودة للأقسام' : 'Back to sections'}</button>
+        </div>
+      </div>
+    );
+  }
 
   const hasFilters = Boolean(search || category);
   const clearFilters = () => { setSearch(''); setCategory(''); };
