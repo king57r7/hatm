@@ -6,10 +6,16 @@ import { useLang, useAuth } from '../../lib/context';
 type SortOption = 'default' | 'price_asc' | 'price_desc' | 'name_asc';
 
 export default function SectionServicesPage() {
+  console.log('🟢 SectionServicesPage component rendering');
+  
   const { t, locale, dir } = useLang();
   const { user, refresh } = useAuth();
   const [, navigate] = useLocation();
   const params = useParams<{ id: string }>();
+  
+  console.log('🔵 params:', params);
+  console.log('🔵 window.location.pathname:', window.location.pathname);
+  
   const [section, setSection] = useState<any>(null);
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,86 +27,158 @@ export default function SectionServicesPage() {
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
+    console.log('🟡 useEffect started');
+    
     // حاول الحصول على الـ ID من params
     let sectionId = params.id;
+    console.log('🟡 params.id:', sectionId);
     
     // إذا ما اشتغل، حاول من الـ URL مباشرة
     if (!sectionId) {
       const pathParts = window.location.pathname.split('/');
       sectionId = pathParts[pathParts.length - 1];
+      console.log('🟡 fallback sectionId from URL:', sectionId);
     }
     
-    console.log('Section ID:', sectionId);
+    console.log('🟡 Final sectionId:', sectionId);
     
     if (!sectionId) {
-      console.warn('No section ID found');
+      console.warn('🔴 No section ID found');
       setLoading(false);
       return;
     }
     
+    console.log('🟡 Setting loading to true');
     setLoading(true);
-    fetch(`/api/sections/${sectionId}/services`, { credentials: 'include' })
-      .then(response => response.json())
+    
+    const url = `/api/sections/${sectionId}/services`;
+    console.log('🟡 Fetching from:', url);
+    
+    fetch(url, { credentials: 'include' })
+      .then(response => {
+        console.log('🟡 Response received, status:', response.status);
+        console.log('🟡 Response ok:', response.ok);
+        return response.json();
+      })
       .then(data => {
-        console.log('Data loaded:', data);
+        console.log('🟢 Data loaded successfully:', data);
+        console.log('🟢 section:', data.section);
+        console.log('🟢 services length:', data.services?.length);
+        console.log('🟢 services:', data.services);
+        
         setSection(data.section || null);
         setServices(data.services || []);
+        
+        console.log('🟢 State updated');
       })
       .catch(err => {
-        console.error('Error:', err);
+        console.error('🔴 Error:', err);
+        console.error('🔴 Error message:', err.message);
         setSection(null);
         setServices([]);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        console.log('🟡 Setting loading to false');
+        setLoading(false);
+      });
   }, [params.id]);
 
-  const categories = useMemo(() => [...new Set(services.map(service => service.category).filter(Boolean))].sort(), [services]);
+  const categories = useMemo(() => {
+    const cats = [...new Set(services.map(service => service.category).filter(Boolean))].sort();
+    console.log('🟢 Categories calculated:', cats);
+    return cats;
+  }, [services]);
 
   const filtered = useMemo(() => {
+    console.log('🟡 Filtering - search:', search, 'category:', category, 'sort:', sort);
     const query = search.trim().toLowerCase();
     let list = services.filter(service => {
       const matchesQuery = !query || service.name?.toLowerCase().includes(query) || service.category?.toLowerCase().includes(query) || service.nameAr?.includes(search);
       const matchesCategory = !category || service.category === category;
       return matchesQuery && matchesCategory;
     });
+    console.log('🟡 After filtering:', list.length, 'services');
+    
     if (sort === 'price_asc') list = [...list].sort((a, b) => (a.finalPricePerK || 0) - (b.finalPricePerK || 0));
     else if (sort === 'price_desc') list = [...list].sort((a, b) => (b.finalPricePerK || 0) - (a.finalPricePerK || 0));
     else if (sort === 'name_asc') list = [...list].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    
+    console.log('🟢 Final filtered list:', list.length, 'services');
     return list;
   }, [services, search, category, sort]);
+  
   const cost = order ? ((order.service.finalPricePerK / 1000) * (parseInt(order.qty) || 0)) : 0;
+  console.log('💰 Cost calculated:', cost);
+  
   const walletBalance = user?.walletBalance ?? 0;
+  console.log('💳 Wallet balance:', walletBalance);
 
   const placeOrder = async () => {
-    if (!order) return;
+    console.log('🟡 placeOrder started');
+    if (!order) {
+      console.warn('🔴 No order selected');
+      return;
+    }
     setPlacing(true);
     setMsg('');
     try {
+      console.log('🟡 Order details:', order);
       let serviceId = order.service.id;
+      console.log('🟡 Service ID:', serviceId);
+      
       if (order.service.fromProvider) {
+        console.log('🟡 Service from provider - adding service');
         const response = await fetch('/api/services/add-by-id', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ providerServiceId: order.service.providerId, apiProviderConfigId: order.service.apiProviderConfigId }) });
         const data = await response.json();
-        if (!response.ok) { setMsg(data.error); return; }
+        console.log('🟡 Add service response:', data);
+        if (!response.ok) { 
+          console.error('🔴 Error adding service:', data.error);
+          setMsg(data.error); 
+          return; 
+        }
         serviceId = data.service.id;
+        console.log('🟡 New service ID:', serviceId);
       }
+      
+      console.log('🟡 Creating order with serviceId:', serviceId);
       const response = await fetch('/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ serviceId, link: order.link, quantity: parseInt(order.qty) }) });
       const data = await response.json();
+      console.log('🟡 Order response:', data);
+      
       if (response.ok) {
+        console.log('🟢 Order placed successfully');
         setMsg(locale === 'ar' ? 'تم إرسال طلبك بنجاح.' : 'Your order was placed successfully.');
         await refresh();
         window.setTimeout(() => { setOrder(null); navigate('/dashboard/orders'); }, 1200);
-      } else setMsg(data.error || t.error);
+      } else {
+        console.error('🔴 Order error:', data.error);
+        setMsg(data.error || t.error);
+      }
+    } catch (err) {
+      console.error('🔴 Exception in placeOrder:', err);
+      setMsg('An error occurred');
     } finally {
+      console.log('🟡 placeOrder finished');
       setPlacing(false);
     }
   };
 
   const BackIcon = dir === 'rtl' ? ArrowRight : ArrowLeft;
   
-  if (loading) return <div className="flex items-center justify-center py-28"><div className="king-spinner" /></div>;
+  console.log('🟢 Rendering - loading:', loading);
+  console.log('🟢 Rendering - section:', section);
+  console.log('🟢 Rendering - services.length:', services.length);
+  
+  if (loading) {
+    console.log('🟡 Showing loading spinner');
+    return <div className="flex items-center justify-center py-28"><div className="king-spinner" /></div>;
+  }
   
   // إذا ما فيش بيانات
   if (!section || !services || services.length === 0) {
+    console.log('🟡 No data - showing empty state');
+    console.log('🟡 section is:', section);
+    console.log('🟡 services is:', services);
     return (
       <div className="page-shell">
         <div className="page-heading">
@@ -116,6 +194,8 @@ export default function SectionServicesPage() {
     );
   }
 
+  console.log('🟢 Rendering services list');
+  
   const hasFilters = Boolean(search || category);
   const clearFilters = () => { setSearch(''); setCategory(''); };
 
