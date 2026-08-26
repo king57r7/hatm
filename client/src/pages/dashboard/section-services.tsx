@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useParams } from 'wouter';
-import { ArrowLeft, ArrowRight, CheckCircle2, CircleDollarSign, ExternalLink, ImageIcon, PackageSearch, Search, ShieldCheck, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, CircleDollarSign, ExternalLink, ImageIcon, PackageSearch, Search, ShieldCheck, SlidersHorizontal, Tags, X } from 'lucide-react';
 import { useLang, useAuth } from '../../lib/context';
+
+type SortOption = 'default' | 'price_asc' | 'price_desc' | 'name_asc';
 
 export default function SectionServicesPage() {
   const { t, locale, dir } = useLang();
@@ -12,6 +14,8 @@ export default function SectionServicesPage() {
   const [services, setServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [sort, setSort] = useState<SortOption>('default');
   const [order, setOrder] = useState<{ service: any; link: string; qty: string } | null>(null);
   const [placing, setPlacing] = useState(false);
   const [msg, setMsg] = useState('');
@@ -25,11 +29,22 @@ export default function SectionServicesPage() {
     }).finally(() => setLoading(false));
   }, [params.id]);
 
-  const filtered = useMemo(() => services.filter(service => {
-    const query = search.toLowerCase();
-    return !query || service.name.toLowerCase().includes(query) || service.category?.toLowerCase().includes(query) || service.nameAr?.includes(search);
-  }), [services, search]);
+  const categories = useMemo(() => [...new Set(services.map(service => service.category).filter(Boolean))].sort(), [services]);
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    let list = services.filter(service => {
+      const matchesQuery = !query || service.name?.toLowerCase().includes(query) || service.category?.toLowerCase().includes(query) || service.nameAr?.includes(search);
+      const matchesCategory = !category || service.category === category;
+      return matchesQuery && matchesCategory;
+    });
+    if (sort === 'price_asc') list = [...list].sort((a, b) => (a.finalPricePerK || 0) - (b.finalPricePerK || 0));
+    else if (sort === 'price_desc') list = [...list].sort((a, b) => (b.finalPricePerK || 0) - (a.finalPricePerK || 0));
+    else if (sort === 'name_asc') list = [...list].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    return list;
+  }, [services, search, category, sort]);
   const cost = order ? ((order.service.finalPricePerK / 1000) * (parseInt(order.qty) || 0)) : 0;
+  const walletBalance = user?.walletBalance ?? 0;
 
   const placeOrder = async () => {
     if (!order) return;
@@ -58,16 +73,43 @@ export default function SectionServicesPage() {
   const BackIcon = dir === 'rtl' ? ArrowRight : ArrowLeft;
   if (loading) return <div className="flex items-center justify-center py-28"><div className="king-spinner" /></div>;
 
+  const hasFilters = Boolean(search || category);
+  const clearFilters = () => { setSearch(''); setCategory(''); };
+
   return (
     <div className="page-shell">
       <div className="page-heading">
-        <div className="flex items-start gap-4"><button onClick={() => navigate('/dashboard/services')} className="icon-button mt-1" aria-label="Back"><BackIcon size={18} /></button>{section && <><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl ring-1 ring-white/10" style={{ backgroundColor: `${section.color}24` }}>{section.icon}</div><div><div className="eyebrow"><span className="eyebrow-dot" />{locale === 'ar' ? 'اختيار الخدمة' : 'Service selection'}</div><h1 className="page-title mt-1">{locale === 'ar' ? section.nameAr : section.name}</h1>{(section.descriptionAr || section.description) && <p className="page-subtitle">{locale === 'ar' ? section.descriptionAr : section.description}</p>}</div></>}</div>
+        <div className="flex items-start gap-4">
+          <button onClick={() => navigate('/dashboard/services')} className="icon-button mt-1" aria-label="Back"><BackIcon size={18} /></button>
+          {section && <>
+            {section.imageUrl ? (
+              <img src={section.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-2xl object-cover ring-1 ring-white/10" />
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl ring-1 ring-white/10" style={{ backgroundColor: `${section.color}24` }}>{section.icon}</div>
+            )}
+            <div><div className="eyebrow"><span className="eyebrow-dot" />{locale === 'ar' ? 'اختيار الخدمة' : 'Service selection'}</div><h1 className="page-title mt-1">{locale === 'ar' ? section.nameAr : section.name}</h1>{(section.descriptionAr || section.description) && <p className="page-subtitle">{locale === 'ar' ? section.descriptionAr : section.description}</p>}</div>
+          </>}
+        </div>
         <div className="hidden items-center gap-2 rounded-xl border border-white/[.08] bg-white/[.035] px-4 py-3 text-xs font-bold text-[#a9b5d4] sm:flex"><PackageSearch size={16} className="text-[#ffc95c]" /><span>{filtered.length} {locale === 'ar' ? 'خدمة مطابقة' : 'matching services'}</span></div>
       </div>
 
-      <section className="card !p-3 sm:!p-4"><div className="flex flex-col gap-3 md:flex-row md:items-center"><div className="relative flex-1"><Search className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-[#7883a3]" size={18} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder={locale === 'ar' ? 'ابحث باسم الخدمة أو الفئة...' : 'Search by service or category...'} className="input-field !ps-11" /></div><div className="flex items-center gap-2 rounded-xl bg-white/[.035] px-3 py-3 text-xs text-[#97a2c0]"><SlidersHorizontal size={16} className="text-[#b3a8ff]" />{locale === 'ar' ? `${filtered.length} خدمة` : `${filtered.length} services`}</div></div></section>
+      <section className="card !p-3 sm:!p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="relative flex-1"><Search className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-[#7883a3]" size={18} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder={locale === 'ar' ? 'ابحث باسم الخدمة أو الفئة...' : 'Search by service or category...'} className="input-field !ps-11" /></div>
+          {categories.length > 1 && (
+            <div className="relative md:w-52"><Tags className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-[#7883a3]" size={16} /><select value={category} onChange={event => setCategory(event.target.value)} className="input-field !ps-9 appearance-none"><option value="">{locale === 'ar' ? 'كل الفئات' : 'All categories'}</option>{categories.map(c => <option key={c} value={c}>{c}</option>)}</select><ChevronDown className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-[#7883a3]" size={15} /></div>
+          )}
+          <div className="relative md:w-52"><SlidersHorizontal className="pointer-events-none absolute start-3.5 top-1/2 -translate-y-1/2 text-[#b3a8ff]" size={16} /><select value={sort} onChange={event => setSort(event.target.value as SortOption)} className="input-field !ps-9 appearance-none">
+            <option value="default">{locale === 'ar' ? 'الترتيب الافتراضي' : 'Default order'}</option>
+            <option value="price_asc">{locale === 'ar' ? 'السعر: الأقل أولاً' : 'Price: low to high'}</option>
+            <option value="price_desc">{locale === 'ar' ? 'السعر: الأعلى أولاً' : 'Price: high to low'}</option>
+            <option value="name_asc">{locale === 'ar' ? 'الاسم (أبجدياً)' : 'Name (A–Z)'}</option>
+          </select><ChevronDown className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-[#7883a3]" size={15} /></div>
+          {hasFilters && <button onClick={clearFilters} className="btn-ghost !rounded-xl !px-3 text-xs shrink-0"><X size={14} />{locale === 'ar' ? 'مسح الفلاتر' : 'Clear filters'}</button>}
+        </div>
+      </section>
 
-      {filtered.length === 0 ? <div className="empty-state"><span className="empty-icon"><Search size={28} /></span><p className="text-lg font-extrabold text-white">{t.noServices}</p><p className="mt-2 text-sm text-[#8d98b7]">{locale === 'ar' ? 'جرّب عبارة بحث مختلفة أو عُد إلى الأقسام.' : 'Try a different search phrase or return to categories.'}</p></div> : (
+      {filtered.length === 0 ? <div className="empty-state"><span className="empty-icon"><Search size={28} /></span><p className="text-lg font-extrabold text-white">{t.noServices}</p><p className="mt-2 text-sm text-[#8d98b7]">{locale === 'ar' ? 'جرّب عبارة بحث مختلفة أو عُد إلى الأقسام.' : 'Try a different search phrase or return to categories.'}</p>{hasFilters && <button onClick={clearFilters} className="btn-secondary mt-4 !px-4 !py-2 text-xs">{locale === 'ar' ? 'مسح الفلاتر' : 'Clear filters'}</button>}</div> : (
         <section className="space-y-3">
           {filtered.map((service, index) => <article key={service.id || index} className="group relative overflow-hidden rounded-[1.3rem] border border-white/[.075] bg-[rgba(15,19,34,.74)] p-5 shadow-[0_14px_32px_rgba(0,0,0,.14)] transition-all duration-300 hover:border-[#b4a5ff]/30 hover:bg-[rgba(20,25,45,.9)] sm:p-6">
             <div className="absolute -end-12 -top-16 h-40 w-40 rounded-full bg-[#7967ff]/0 blur-3xl transition-all duration-500 group-hover:bg-[#7967ff]/10" />
@@ -81,7 +123,7 @@ export default function SectionServicesPage() {
         </section>
       )}
 
-      {order && <div className="fixed inset-0 z-[60] flex items-end bg-[#03040b]/78 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-5"><section className="relative w-full overflow-hidden rounded-t-[1.8rem] border border-white/[.1] bg-[#12182a] shadow-2xl sm:max-w-xl sm:rounded-[1.6rem]" role="dialog" aria-modal="true"><div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ffe09c] to-transparent" /><div className="flex items-start justify-between border-b border-white/[.07] p-5 sm:p-6"><div><div className="eyebrow"><span className="eyebrow-dot" />{locale === 'ar' ? 'طلب آمن' : 'Secure order'}</div><h3 className="mt-2 text-xl font-extrabold text-white">{t.newOrder}</h3></div><button onClick={() => { setOrder(null); setMsg(''); }} className="icon-button"><X size={18} /></button></div><div className="max-h-[70vh] overflow-y-auto p-5 sm:p-6"><div className="rounded-xl border border-white/[.07] bg-black/15 p-4"><p className="line-clamp-2 text-sm font-bold text-white">{locale === 'ar' && order.service.nameAr ? order.service.nameAr : order.service.name}</p><p className="mt-1 text-xs text-[#8d98b7]">{order.service.category} · #{order.service.providerId}</p></div>{msg && <div className={`mt-4 flex items-start gap-2 rounded-xl px-4 py-3 text-sm ${msg.includes('بنجاح') || msg.includes('successfully') ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-300/20' : 'bg-rose-400/10 text-rose-200 ring-1 ring-rose-300/20'}`}><CheckCircle2 size={18} className="mt-0.5 shrink-0" />{msg}</div>}<div className="mt-4 space-y-4"><div><label className="input-label">{t.link}</label><div className="relative"><ExternalLink className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-[#7e89a8]" size={17} /><input value={order.link} onChange={event => setOrder({ ...order, link: event.target.value })} placeholder="https://..." className="input-field !ps-11" /></div></div><div><label className="input-label">{t.quantity} <span className="font-normal text-[#77829f]">({order.service.min?.toLocaleString()} — {order.service.max?.toLocaleString()})</span></label><input type="number" value={order.qty} onChange={event => setOrder({ ...order, qty: event.target.value })} min={order.service.min} max={order.service.max} className="input-field" /></div><div className="grid grid-cols-2 gap-3"><div className="card-sm"><p className="text-[11px] font-bold text-[#8792b0]">{locale === 'ar' ? 'التكلفة التقديرية' : 'Estimated cost'}</p><p className="mono mt-1 text-lg text-[#ffda83]">${cost.toFixed(4)}</p></div><div className="card-sm"><p className="text-[11px] font-bold text-[#8792b0]">{t.balance}</p><p className={`mono mt-1 text-lg ${(user?.walletBalance || 0) >= cost ? 'text-[#72ecc4]' : 'text-[#ff8fa3]'}`}>${user?.walletBalance.toFixed(2)}</p></div></div>{(user?.walletBalance || 0) < cost && <p className="text-center text-xs font-bold text-[#ff8fa3]">{t.insufficientBalance}</p>}</div></div><div className="flex gap-3 border-t border-white/[.07] p-5 sm:p-6"><button onClick={() => { setOrder(null); setMsg(''); }} className="btn-secondary flex-1">{t.cancel}</button><button onClick={placeOrder} disabled={placing || !order.link || cost <= 0 || cost > (user?.walletBalance || 0)} className="btn-primary flex-1">{placing ? t.loading : t.confirm}</button></div></section></div>}
+      {order && <div className="fixed inset-0 z-[60] flex items-end bg-[#03040b]/78 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-5"><section className="relative w-full overflow-hidden rounded-t-[1.8rem] border border-white/[.1] bg-[#12182a] shadow-2xl sm:max-w-xl sm:rounded-[1.6rem]" role="dialog" aria-modal="true"><div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ffe09c] to-transparent" /><div className="flex items-start justify-between border-b border-white/[.07] p-5 sm:p-6"><div><div className="eyebrow"><span className="eyebrow-dot" />{locale === 'ar' ? 'طلب آمن' : 'Secure order'}</div><h3 className="mt-2 text-xl font-extrabold text-white">{t.newOrder}</h3></div><button onClick={() => { setOrder(null); setMsg(''); }} className="icon-button"><X size={18} /></button></div><div className="max-h-[70vh] overflow-y-auto p-5 sm:p-6"><div className="rounded-xl border border-white/[.07] bg-black/15 p-4"><p className="line-clamp-2 text-sm font-bold text-white">{locale === 'ar' && order.service.nameAr ? order.service.nameAr : order.service.name}</p><p className="mt-1 text-xs text-[#8d98b7]">{order.service.category} · #{order.service.providerId}</p></div>{msg && <div className={`mt-4 flex items-start gap-2 rounded-xl px-4 py-3 text-sm ${msg.includes('بنجاح') || msg.includes('successfully') ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-300/20' : 'bg-rose-400/10 text-rose-200 ring-1 ring-rose-300/20'}`}><CheckCircle2 size={18} className="mt-0.5 shrink-0" />{msg}</div>}<div className="mt-4 space-y-4"><div><label className="input-label">{t.link}</label><div className="relative"><ExternalLink className="pointer-events-none absolute start-4 top-1/2 -translate-y-1/2 text-[#7e89a8]" size={17} /><input value={order.link} onChange={event => setOrder({ ...order, link: event.target.value })} placeholder="https://..." className="input-field !ps-11" /></div></div><div><label className="input-label">{t.quantity} <span className="font-normal text-[#77829f]">({order.service.min?.toLocaleString()} — {order.service.max?.toLocaleString()})</span></label><input type="number" value={order.qty} onChange={event => setOrder({ ...order, qty: event.target.value })} min={order.service.min} max={order.service.max} className="input-field" /></div><div className="grid grid-cols-2 gap-3"><div className="card-sm"><p className="text-[11px] font-bold text-[#8792b0]">{locale === 'ar' ? 'التكلفة التقديرية' : 'Estimated cost'}</p><p className="mono mt-1 text-lg text-[#ffda83]">${cost.toFixed(4)}</p></div><div className="card-sm"><p className="text-[11px] font-bold text-[#8792b0]">{t.balance}</p><p className={`mono mt-1 text-lg ${walletBalance >= cost ? 'text-[#72ecc4]' : 'text-[#ff8fa3]'}`}>${walletBalance.toFixed(2)}</p></div></div>{walletBalance < cost && <p className="text-center text-xs font-bold text-[#ff8fa3]">{t.insufficientBalance}</p>}</div></div><div className="flex gap-3 border-t border-white/[.07] p-5 sm:p-6"><button onClick={() => { setOrder(null); setMsg(''); }} className="btn-secondary flex-1">{t.cancel}</button><button onClick={placeOrder} disabled={placing || !order.link || cost <= 0 || cost > walletBalance} className="btn-primary flex-1">{placing ? t.loading : t.confirm}</button></div></section></div>}
     </div>
   );
 }
