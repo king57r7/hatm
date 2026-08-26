@@ -126,11 +126,18 @@ router.get("/api/sections/:id/services", async (req, res) => {
     const multiplier = Math.max(0, Number(Object.fromEntries(settingsRaw.map(setting => [setting.key, setting.value])).price_multiplier || "1"));
     const selectedProviderIds = parseServiceIds(section.serviceIds);
     const conditions: any[] = [eq(servicesTable.isActive, true), eq(servicesTable.isHidden, false)];
-    if (section.apiProviderConfigId) conditions.push(eq(servicesTable.apiProviderConfigId, section.apiProviderConfigId));
-    if (section.serviceMode !== "all") {
+    
+    // If section has an apiProviderConfigId, always filter by it
+    if (section.apiProviderConfigId) {
+      conditions.push(eq(servicesTable.apiProviderConfigId, section.apiProviderConfigId));
+    }
+    
+    // If serviceMode is "selected", only include the explicitly selected services
+    if (section.serviceMode === "selected") {
       if (!selectedProviderIds.length) return res.json({ services: [], section, catalogSynced: true });
       conditions.push(inArray(servicesTable.providerId, selectedProviderIds));
     }
+    // If serviceMode is "all", return all services from the apiProviderConfigId or all active services
 
     const services = await db.select().from(servicesTable).where(and(...conditions));
     return res.json({
