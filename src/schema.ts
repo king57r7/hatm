@@ -83,6 +83,7 @@ export const sectionsTable = pgTable("sections", {
   nameAr: text("name_ar").notNull(),
   icon: text("icon").default("🌐").notNull(),
   color: text("color").default("#f59e0b").notNull(),
+  imageUrl: text("image_url"),
   description: text("description"),
   descriptionAr: text("description_ar"),
   apiProviderConfigId: text("api_provider_config_id").references(() => apiProviderConfigsTable.id, { onDelete: "set null" }),
