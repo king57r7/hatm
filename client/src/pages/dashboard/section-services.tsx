@@ -23,11 +23,31 @@ export default function SectionServicesPage() {
   useEffect(() => {
     if (!params.id) return;
     setLoading(true);
-    fetch(`/api/sections/${params.id}/services`, { credentials: 'include' }).then(response => response.json()).then(data => {
-      setSection(data.section || null);
-      setServices(data.services || []);
-    }).finally(() => setLoading(false));
-  }, [params.id]);
+    setMsg('');
+    fetch(`/api/sections/${params.id}/services`, { credentials: 'include' })
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        return response.json();
+      })
+      .then(data => {
+        if (data.error) {
+          setMsg(data.error);
+          setSection(null);
+          setServices([]);
+        } else {
+          setSection(data.section || null);
+          setServices(data.services || []);
+          setMsg('');
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching section services:', error);
+        setMsg(locale === 'ar' ? 'حدث خطأ في تحميل الخدمات' : 'Error loading services');
+        setSection(null);
+        setServices([]);
+      })
+      .finally(() => setLoading(false));
+  }, [params.id, locale]);
 
   const categories = useMemo(() => [...new Set(services.map(service => service.category).filter(Boolean))].sort(), [services]);
 
@@ -72,6 +92,40 @@ export default function SectionServicesPage() {
 
   const BackIcon = dir === 'rtl' ? ArrowRight : ArrowLeft;
   if (loading) return <div className="flex items-center justify-center py-28"><div className="king-spinner" /></div>;
+
+  // Show error state
+  if (msg && msg.includes(locale === 'ar' ? 'خطأ' : 'Error')) {
+    return (
+      <div className="page-shell">
+        <div className="page-heading">
+          <button onClick={() => navigate('/dashboard/services')} className="icon-button" aria-label="Back"><BackIcon size={18} /></button>
+        </div>
+        <div className="flex flex-col items-center justify-center py-28 gap-4">
+          <div className="text-6xl">⚠️</div>
+          <h2 className="text-2xl font-bold text-white text-center">{locale === 'ar' ? 'حدث خطأ' : 'Error'}</h2>
+          <p className="text-[#a9b5d4] text-center max-w-md">{msg}</p>
+          <button onClick={() => navigate('/dashboard/services')} className="btn-primary mt-4">{locale === 'ar' ? 'العودة للأقسام' : 'Back to categories'}</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show if section not found
+  if (!section) {
+    return (
+      <div className="page-shell">
+        <div className="page-heading">
+          <button onClick={() => navigate('/dashboard/services')} className="icon-button" aria-label="Back"><BackIcon size={18} /></button>
+        </div>
+        <div className="flex flex-col items-center justify-center py-28 gap-4">
+          <div className="text-6xl">🔍</div>
+          <h2 className="text-2xl font-bold text-white text-center">{locale === 'ar' ? 'القسم غير موجود' : 'Section not found'}</h2>
+          <p className="text-[#a9b5d4] text-center">{locale === 'ar' ? 'هذا القسم لم يعد متاحاً' : 'This section is no longer available'}</p>
+          <button onClick={() => navigate('/dashboard/services')} className="btn-primary mt-4">{locale === 'ar' ? 'العودة للأقسام' : 'Back to categories'}</button>
+        </div>
+      </div>
+    );
+  }
 
   const hasFilters = Boolean(search || category);
   const clearFilters = () => { setSearch(''); setCategory(''); };
