@@ -139,7 +139,11 @@ router.get("/api/sections/:id/services", async (req, res) => {
     }
     // If serviceMode is "all", return all services from the apiProviderConfigId or all active services
 
-    const services = await db.select().from(servicesTable).where(and(...conditions));
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const services = whereClause 
+      ? await db.select().from(servicesTable).where(whereClause)
+      : await db.select().from(servicesTable);
+    
     return res.json({
       services: services.map(service => ({ ...service, finalPricePerK: service.finalPricePerK * multiplier })),
       section,
