@@ -21,32 +21,47 @@ export default function SectionServicesPage() {
   const [msg, setMsg] = useState('');
 
   useEffect(() => {
-    if (!params.id) return;
+    if (!params.id) {
+      console.warn('⚠️ No section ID in params');
+      return;
+    }
+    
+    console.log('📡 Fetching section:', params.id);
     setLoading(true);
     setMsg('');
+    
     fetch(`/api/sections/${params.id}/services`, { credentials: 'include' })
       .then(response => {
+        console.log('✅ API Response Status:', response.status);
         if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         return response.json();
       })
       .then(data => {
+        console.log('📦 API Data received:', data);
+        console.log('📊 Services count:', data.services?.length);
+        
         if (data.error) {
+          console.error('❌ API Error:', data.error);
           setMsg(data.error);
           setSection(null);
           setServices([]);
         } else {
+          console.log('✅ Setting state with data');
           setSection(data.section || null);
-          setServices(data.services || []);
+          setServices(Array.isArray(data.services) ? data.services : []);
           setMsg('');
         }
       })
       .catch(error => {
-        console.error('Error fetching section services:', error);
+        console.error('❌ Fetch Error:', error);
         setMsg(locale === 'ar' ? 'حدث خطأ في تحميل الخدمات' : 'Error loading services');
         setSection(null);
         setServices([]);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        console.log('✅ Loading complete');
+        setLoading(false);
+      });
   }, [params.id, locale]);
 
   const categories = useMemo(() => [...new Set(services.map(service => service.category).filter(Boolean))].sort(), [services]);
