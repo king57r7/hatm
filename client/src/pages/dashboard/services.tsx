@@ -35,7 +35,14 @@ export default function ServicesPage() {
             const count = section.serviceMode === 'all' ? (locale === 'ar' ? 'جميع الخدمات' : 'All services') : `${JSON.parse(section.serviceIds || '[]').length} ${locale === 'ar' ? 'خدمة' : 'services'}`;
             return <button key={section.id} onClick={() => navigate(`/dashboard/services/section/${section.id}`)} className="group relative overflow-hidden rounded-[1.35rem] border border-white/[.075] bg-[rgba(16,20,35,.7)] p-5 text-start shadow-[0_18px_42px_rgba(0,0,0,.16)] transition-all duration-300 hover:-translate-y-1 hover:border-[#b5a5ff]/35 hover:shadow-[0_24px_50px_rgba(24,22,74,.28)]" style={{ animationDelay: `${index * 55}ms` }}>
               <div className="absolute -end-10 -top-10 h-32 w-32 rounded-full opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-30" style={{ background: section.color }} />
-              <div className="relative flex items-start justify-between gap-4"><span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" style={{ backgroundColor: `${section.color}22`, boxShadow: `0 14px 28px ${section.color}18` }}>{section.icon}</span><span className="rounded-full border border-white/[.08] bg-black/10 px-2.5 py-1 text-[10px] font-bold text-[#aeb8d2]">{count}</span></div>
+              <div className="relative flex items-start justify-between gap-4">
+                {section.imageUrl ? (
+                  <span className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-110"><img src={section.imageUrl} alt="" className="h-full w-full object-cover" /></span>
+                ) : (
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" style={{ backgroundColor: `${section.color}22`, boxShadow: `0 14px 28px ${section.color}18` }}>{section.icon}</span>
+                )}
+                <span className="rounded-full border border-white/[.08] bg-black/10 px-2.5 py-1 text-[10px] font-bold text-[#aeb8d2]">{count}</span>
+              </div>
               <div className="relative mt-5"><h3 className="text-lg font-extrabold text-white transition-colors group-hover:text-[#ffe09a]">{locale === 'ar' ? section.nameAr : section.name}</h3>{(section.descriptionAr || section.description) && <p className="mt-2 min-h-10 text-sm leading-5 text-[#8f9ab8]">{locale === 'ar' ? section.descriptionAr : section.description}</p>}</div>
               <div className="relative mt-5 flex items-center justify-between border-t border-white/[.06] pt-4 text-xs font-bold"><span className="text-[#96a2c3]">{locale === 'ar' ? 'استعراض الخيارات' : 'Browse options'}</span><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[.06] text-[#ffda83] transition-all duration-200 group-hover:bg-[#ffc95c] group-hover:text-[#181326]"><ArrowUpRight size={15} /></span></div>
             </button>;
