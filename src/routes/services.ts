@@ -307,9 +307,20 @@ router.post("/api/services/sync", async (req, res) => {
       activeSyncs.delete(apiProviderConfigId);
     }
   } catch (err) {
-    console.error(err);
-    if (err instanceof ProviderRequestError) return res.status(err.statusCode).json({ error: err.message });
-    return res.status(500).json({ error: "تعذرت مزامنة الخدمات. حاول مرة أخرى لاحقاً." });
+    if (err instanceof ProviderRequestError) {
+      console.error("[services/sync] provider error:", err.message);
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    const dbCause = (err as any)?.cause;
+    const realMessage = dbCause?.message || (err instanceof Error ? err.message : String(err));
+    const realCode = dbCause?.code;
+    console.error(`[services/sync] DB error${realCode ? ` (code ${realCode})` : ""}: ${realMessage}`);
+    // ADMIN-only route already enforced above, so it's safe to surface the real DB message here for diagnosis.
+    return res.status(500).json({
+      error: "تعذرت مزامنة الخدمات. حاول مرة أخرى لاحقاً.",
+      detail: realMessage,
+      code: realCode ?? null,
+    });
   }
 });
 
