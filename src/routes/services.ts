@@ -163,6 +163,15 @@ router.get("/api/services", async (req, res) => {
     if (adminView && req.query.status === "inactive") conditions.push(eq(servicesTable.isActive, false));
     if (adminView && req.query.status === "hidden") conditions.push(eq(servicesTable.isHidden, true));
 
+    // Lets the admin section-builder resolve display info for a known set of
+    // providerId values (e.g. services already selected for a section),
+    // regardless of which page they'd normally fall on.
+    if (adminView && typeof req.query.ids === "string" && req.query.ids.trim()) {
+      const idList = req.query.ids.split(",").map(value => Math.trunc(Number(value.trim()))).filter(Number.isInteger);
+      if (idList.length) conditions.push(inArray(servicesTable.providerId, idList));
+      else conditions.push(sql`false`);
+    }
+
     const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
     if (search) {
       conditions.push(or(
@@ -175,7 +184,9 @@ router.get("/api/services", async (req, res) => {
 
     // Pagination: admin panel can hold tens of thousands of rows after a provider sync,
     // so we never return the full table in one response — that's what was freezing the tab.
-    const pageSize = adminView ? Math.min(200, Math.max(1, validNumber(req.query.pageSize, 60))) : 500;
+    const hasIdsFilter = adminView && typeof req.query.ids === "string" && req.query.ids.trim().length > 0;
+    const pageSizeCap = hasIdsFilter ? 1000 : 200;
+    const pageSize = adminView ? Math.min(pageSizeCap, Math.max(1, validNumber(req.query.pageSize, hasIdsFilter ? pageSizeCap : 60))) : 500;
     const page = Math.max(1, Math.trunc(validNumber(req.query.page, 1)));
     const offset = (page - 1) * pageSize;
 
