@@ -5,12 +5,33 @@ import { getSession } from "../lib/session.js";
 
 const router = Router();
 
+const MAX_SECTION_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB decoded
+
 function parseServiceIds(value: string) {
   try {
     const parsed = JSON.parse(value || "[]");
     return Array.isArray(parsed) ? parsed.map(Number).filter(Number.isInteger) : [];
   } catch {
     return [];
+  }
+}
+
+// Accepts either a normal http(s) image URL, or a base64 data: URL uploaded
+// directly from the admin panel (same pattern used for the site logo).
+function safeImageValue(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const normalized = value.trim();
+  if (normalized.startsWith("data:image/")) {
+    const base64Part = normalized.split(",")[1] || "";
+    const approxBytes = Math.floor((base64Part.length * 3) / 4);
+    if (approxBytes > MAX_SECTION_IMAGE_BYTES) return null;
+    return normalized;
+  }
+  try {
+    const url = new URL(normalized);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
   }
 }
 
@@ -33,13 +54,14 @@ router.post("/api/sections", async (req, res) => {
   try {
     const session = await getSession(req, res);
     if (!session.userId || session.role !== "ADMIN") return res.status(401).json({ error: "Unauthorized" });
-    const { name, nameAr, icon, color, description, descriptionAr, apiProviderConfigId, serviceMode, serviceIds, displayOrder } = req.body;
+    const { name, nameAr, icon, color, imageUrl, description, descriptionAr, apiProviderConfigId, serviceMode, serviceIds, displayOrder } = req.body;
     if (!name || !nameAr) return res.status(400).json({ error: "Name required in both languages" });
     const [section] = await db.insert(sectionsTable).values({
       name,
       nameAr,
       icon: icon || "🌐",
       color: color || "#f59e0b",
+      imageUrl: safeImageValue(imageUrl),
       description,
       descriptionAr,
       apiProviderConfigId: apiProviderConfigId || null,
@@ -64,6 +86,7 @@ router.patch("/api/sections/:id", async (req, res) => {
     if (body.nameAr !== undefined) updates.nameAr = body.nameAr;
     if (body.icon !== undefined) updates.icon = body.icon;
     if (body.color !== undefined) updates.color = body.color;
+    if (body.imageUrl !== undefined) updates.imageUrl = safeImageValue(body.imageUrl);
     if (body.description !== undefined) updates.description = body.description;
     if (body.descriptionAr !== undefined) updates.descriptionAr = body.descriptionAr;
     if (body.apiProviderConfigId !== undefined) updates.apiProviderConfigId = body.apiProviderConfigId || null;
