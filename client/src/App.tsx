@@ -26,8 +26,8 @@ function DashboardRoutes() {
     <DashboardLayout>
       <Switch>
         <Route path="/dashboard" component={DashboardHome} />
-        <Route path="/dashboard/services" component={ServicesPage} />
         <Route path="/dashboard/services/section/:id" component={SectionServicesPage} />
+        <Route path="/dashboard/services" component={ServicesPage} />
         <Route path="/dashboard/orders" component={OrdersPage} />
         <Route path="/dashboard/wallet" component={WalletPage} />
         <Route path="/dashboard/profile" component={ProfilePage} />
