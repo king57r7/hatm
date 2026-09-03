@@ -48,6 +48,19 @@ function safeRemoteUrl(value: unknown) {
   }
 }
 
+const MAX_SERVICE_IMAGE_BYTES = 2 * 1024 * 1024;
+
+function safeImageValue(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const normalized = value.trim();
+  if (normalized.startsWith("data:image/")) {
+    const base64Part = normalized.split(",")[1] || "";
+    if (Math.floor((base64Part.length * 3) / 4) > MAX_SERVICE_IMAGE_BYTES) return null;
+    return normalized;
+  }
+  return safeRemoteUrl(normalized);
+}
+
 function trimText(value: unknown, fallback = "", max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : fallback;
 }
@@ -260,6 +273,19 @@ router.patch("/api/services/bulk", async (req, res) => {
   }
 });
 
+router.get("/api/services/:id", async (req, res) => {
+  try {
+    const session = await getSession(req, res);
+    if (!session.userId || session.role !== "ADMIN") return res.status(401).json({ error: "Unauthorized" });
+    const [service] = await db.select().from(servicesTable).where(eq(servicesTable.id, req.params.id)).limit(1);
+    if (!service) return res.status(404).json({ error: "Not found" });
+    return res.json({ service });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.patch("/api/services/:id", async (req, res) => {
   try {
     const session = await getSession(req, res);
@@ -268,14 +294,20 @@ router.patch("/api/services/:id", async (req, res) => {
     if (!service) return res.status(404).json({ error: "Not found" });
     const body = req.body;
     const updates: any = { updatedAt: new Date() };
+    if (body.name !== undefined) updates.name = trimText(body.name, service.name, 500);
     if (body.nameAr !== undefined) updates.nameAr = trimText(body.nameAr, "", 500) || null;
+    if (body.category !== undefined) updates.category = trimText(body.category, service.category, 250);
     if (body.categoryAr !== undefined) updates.categoryAr = trimText(body.categoryAr, "", 250) || null;
     if (body.description !== undefined) updates.description = trimText(body.description, "", 2000) || null;
     if (body.descriptionAr !== undefined) updates.descriptionAr = trimText(body.descriptionAr, "", 2000) || null;
-    if (body.imageUrl !== undefined) updates.imageUrl = safeRemoteUrl(body.imageUrl);
+    if (body.imageUrl !== undefined) updates.imageUrl = safeImageValue(body.imageUrl);
+    if (body.type !== undefined) updates.type = trimText(body.type, "", 100) || null;
+    if (body.min !== undefined && Number.isFinite(Number(body.min))) updates.min = Math.max(0, Math.trunc(Number(body.min)));
+    if (body.max !== undefined && Number.isFinite(Number(body.max))) updates.max = Math.max(updates.min ?? service.min, Math.trunc(Number(body.max)));
+    if (body.refill !== undefined) updates.refill = Boolean(body.refill);
+    if (body.cancel !== undefined) updates.cancel = Boolean(body.cancel);
     if (body.isActive !== undefined) updates.isActive = Boolean(body.isActive);
     if (body.isHidden !== undefined) updates.isHidden = Boolean(body.isHidden);
-    if (body.name !== undefined) updates.name = trimText(body.name, service.name, 500);
     if (body.markupPercent !== undefined) {
       const markupPercent = validNumber(body.markupPercent, NaN);
       if (!Number.isFinite(markupPercent) || markupPercent < -100 || markupPercent > 10000) return res.status(400).json({ error: "Enter a valid markup percentage" });

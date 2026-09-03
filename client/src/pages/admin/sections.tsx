@@ -390,6 +390,7 @@ export default function AdminSectionsPage() {
                           return (
                             <span key={id} className="count-chip !bg-white">
                               {meta ? (locale === 'ar' && meta.nameAr ? meta.nameAr : meta.name) : `#${id}`}
+                              {meta?.id && <button type="button" onClick={() => { window.location.href = `/admin/services?edit=${meta.id}`; }} className="ms-1 text-[#64748b] hover:text-amber-600" title={text('تعديل الخدمة', 'Edit service')}><Pencil size={12} /></button>}
                               <button type="button" onClick={() => removeSelected(id)} className="ms-1 text-[#94a3b8] hover:text-rose-600"><X size={12} /></button>
                             </span>
                           );
