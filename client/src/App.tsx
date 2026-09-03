@@ -36,6 +36,16 @@ function DashboardRoutes() {
   );
 }
 
+// Keep the parameterized section route explicit at the top level. This avoids
+// relying on a nested Switch to rematch a full pathname after navigation.
+function DashboardSectionRoute() {
+  return (
+    <DashboardLayout>
+      <SectionServicesPage />
+    </DashboardLayout>
+  );
+}
+
 function AdminRoutes() {
   return (
     <AdminLayout>
@@ -64,6 +74,7 @@ export default function App() {
             <Switch>
               <Route path="/login" component={LoginPage} />
               <Route path="/register" component={RegisterPage} />
+              <Route path="/dashboard/services/section/:id" component={DashboardSectionRoute} />
               <Route path="/dashboard" component={DashboardRoutes} />
               <Route path="/dashboard/:rest*" component={DashboardRoutes} />
               <Route path="/admin" component={AdminRoutes} />
