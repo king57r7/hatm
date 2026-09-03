@@ -107,24 +107,32 @@ export default function AdminServicesPage() {
   };
 
   const update = async (id: string, data: Record<string, unknown>) => {
-    const response = await fetch(`/api/services/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(data) });
-    const result = await response.json();
-    if (!response.ok) setMsg({ success: false, text: result.error || t.error });
-    else setMsg({ success: true, text: locale === 'ar' ? 'تم تحديث الخدمة.' : 'Service updated.' });
-    setEditing(null);
-    load();
+    try {
+      const response = await fetch(`/api/services/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(data) });
+      const result = await response.json();
+      if (!response.ok) { setMsg({ success: false, text: result.error || t.error }); return; }
+      setMsg({ success: true, text: locale === 'ar' ? 'تم تحديث الخدمة بنجاح.' : 'Service updated successfully.' });
+      setEditing(null);
+      load();
+    } catch {
+      setMsg({ success: false, text: locale === 'ar' ? 'تعذر الاتصال بالخادم. حاول مجددًا.' : 'Could not reach the server. Please try again.' });
+    }
   };
 
   const executeBulk = async (action: BulkAction, markup?: number) => {
     if (!selectedCount) return;
     if (action === 'delete' && !window.confirm(locale === 'ar' ? `حذف ${selectedCount} خدمة نهائياً؟` : `Permanently delete ${selectedCount} services?`)) return;
-    const response = await fetch('/api/services/bulk', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ ids: Array.from(selected), action, markupPercent: markup }) });
-    const result = await response.json();
-    if (!response.ok) setMsg({ success: false, text: result.error || t.error });
-    else setMsg({ success: true, text: locale === 'ar' ? `تم تطبيق الإجراء على ${result.affected} خدمة.` : `Action applied to ${result.affected} services.` });
-    setBulkMarkupOpen(false);
-    setSelected(new Set());
-    load();
+    try {
+      const response = await fetch('/api/services/bulk', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ ids: Array.from(selected), action, markupPercent: markup }) });
+      const result = await response.json();
+      if (!response.ok) { setMsg({ success: false, text: result.error || t.error }); return; }
+      setMsg({ success: true, text: locale === 'ar' ? `تم تطبيق الإجراء على ${result.affected} خدمة.` : `Action applied to ${result.affected} services.` });
+      setBulkMarkupOpen(false);
+      setSelected(new Set());
+      load();
+    } catch {
+      setMsg({ success: false, text: locale === 'ar' ? 'تعذر الاتصال بالخادم. حاول مجددًا.' : 'Could not reach the server. Please try again.' });
+    }
   };
 
   const clearFilters = () => { setSearch(''); setProvider(''); setCategory(''); setStatus(''); };

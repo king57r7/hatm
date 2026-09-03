@@ -247,9 +247,10 @@ router.patch("/api/services/bulk", async (req, res) => {
 
     if (action === "activate_featured") {
       const [featuredCount] = await db.select({ total: sql<number>`count(*)` }).from(servicesTable).where(eq(servicesTable.isFeatured, true));
-      if (Number(featuredCount?.total || 0) + uniqueIds.length > 12) return res.status(400).json({ error: "يمكن اختيار 12 خدمة مميزة كحد أقصى." });
-      const selectedServices = await db.select({ id: servicesTable.id }).from(servicesTable).where(inArray(servicesTable.id, uniqueIds));
-      await Promise.all(selectedServices.map((service, index) => db.update(servicesTable).set({ isActive: true, isFeatured: true, featuredOrder: Number(featuredCount?.total || 0) + index, updatedAt: now }).where(eq(servicesTable.id, service.id))));
+      const selectedServices = await db.select({ id: servicesTable.id, isFeatured: servicesTable.isFeatured }).from(servicesTable).where(inArray(servicesTable.id, uniqueIds));
+      const newFeatured = selectedServices.filter(service => !service.isFeatured);
+      if (Number(featuredCount?.total || 0) + newFeatured.length > 12) return res.status(400).json({ error: "يمكن اختيار 12 خدمة مميزة كحد أقصى." });
+      await Promise.all(selectedServices.map((service, index) => db.update(servicesTable).set({ isActive: true, isFeatured: true, featuredOrder: service.isFeatured ? undefined : Number(featuredCount?.total || 0) + index, updatedAt: now }).where(eq(servicesTable.id, service.id))));
       return res.json({ success: true, affected: selectedServices.length, action });
     }
 
