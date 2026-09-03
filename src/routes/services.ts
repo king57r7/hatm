@@ -245,6 +245,14 @@ router.patch("/api/services/bulk", async (req, res) => {
       return res.json({ success: true, affected: uniqueIds.length, action });
     }
 
+    if (action === "activate_featured") {
+      const [featuredCount] = await db.select({ total: sql<number>`count(*)` }).from(servicesTable).where(eq(servicesTable.isFeatured, true));
+      if (Number(featuredCount?.total || 0) + uniqueIds.length > 12) return res.status(400).json({ error: "يمكن اختيار 12 خدمة مميزة كحد أقصى." });
+      const selectedServices = await db.select({ id: servicesTable.id }).from(servicesTable).where(inArray(servicesTable.id, uniqueIds));
+      await Promise.all(selectedServices.map((service, index) => db.update(servicesTable).set({ isActive: true, isFeatured: true, featuredOrder: Number(featuredCount?.total || 0) + index, updatedAt: now }).where(eq(servicesTable.id, service.id))));
+      return res.json({ success: true, affected: selectedServices.length, action });
+    }
+
     if (action === "activate" || action === "deactivate" || action === "hide" || action === "show") {
       const changes = action === "activate" ? { isActive: true, updatedAt: now }
         : action === "deactivate" ? { isActive: false, updatedAt: now }
