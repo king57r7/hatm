@@ -25,6 +25,7 @@ export default function SectionServicesPage() {
   const [order, setOrder] = useState<{ service: any; link: string; qty: string } | null>(null);
   const [placing, setPlacing] = useState(false);
   const [msg, setMsg] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     console.log('🟡 useEffect started');
@@ -54,10 +55,13 @@ export default function SectionServicesPage() {
     const url = `/api/sections/${sectionId}/services`;
     console.log('🟡 Fetching from:', url);
     
+    setLoadError('');
+
     fetch(url, { credentials: 'include' })
       .then(response => {
         console.log('🟡 Response received, status:', response.status);
         console.log('🟡 Response ok:', response.ok);
+        if (!response.ok) throw new Error(`Services request failed with status ${response.status}`);
         return response.json();
       })
       .then(data => {
@@ -76,12 +80,13 @@ export default function SectionServicesPage() {
         console.error('🔴 Error message:', err.message);
         setSection(null);
         setServices([]);
+        setLoadError(locale === 'ar' ? 'تعذّر تحميل خدمات هذا القسم. حاول تحديث الصفحة.' : 'Could not load this section. Please refresh and try again.');
       })
       .finally(() => {
         console.log('🟡 Setting loading to false');
         setLoading(false);
       });
-  }, [params.id]);
+  }, [params.id, locale]);
 
   const categories = useMemo(() => {
     const cats = [...new Set(services.map(service => service.category).filter(Boolean))].sort();
@@ -184,10 +189,10 @@ export default function SectionServicesPage() {
         <div className="page-heading">
           <button onClick={() => navigate('/dashboard/services')} className="icon-button mt-1" aria-label="Back"><BackIcon size={18} /></button>
         </div>
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <div className="text-6xl">📭</div>
-          <h2 className="text-2xl font-bold text-white">{locale === 'ar' ? 'لا توجد خدمات' : 'No services'}</h2>
-          <p className="text-[#a9b5d4]">{locale === 'ar' ? 'لا توجد خدمات متاحة في هذا القسم' : 'No services available in this section'}</p>
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="text-6xl">{loadError ? '⚠️' : '📭'}</div>
+          <h2 className="text-2xl font-bold text-white">{loadError || (locale === 'ar' ? 'لا توجد خدمات' : 'No services')}</h2>
+          {!loadError && <p className="text-[#a9b5d4]">{locale === 'ar' ? 'لا توجد خدمات متاحة في هذا القسم' : 'No services available in this section'}</p>}
           <button onClick={() => navigate('/dashboard/services')} className="btn-primary mt-4">{locale === 'ar' ? 'العودة للأقسام' : 'Back to sections'}</button>
         </div>
       </div>
@@ -240,7 +245,7 @@ export default function SectionServicesPage() {
               <div className="flex min-w-0 flex-1 gap-4">
                 <div className="catalog-service-image">{service.imageUrl ? <img src={service.imageUrl} alt="" /> : <ImageIcon size={21} />}</div>
                 <div className="min-w-0 flex-1"><div className="mb-3 flex flex-wrap items-center gap-2"><span className="rounded-full bg-[#ffc95c]/10 px-2.5 py-1 text-[10px] font-extrabold text-[#ffd978] ring-1 ring-inset ring-[#ffc95c]/15">{service.category}</span>{service.refill && <span className="inline-flex items-center gap-1 rounded-full bg-[#53a8ff]/10 px-2.5 py-1 text-[10px] font-extrabold text-[#8ecbff] ring-1 ring-inset ring-[#53a8ff]/15"><CheckCircle2 size={12} />{locale === 'ar' ? 'إعادة تعبئة' : 'Refill'}</span>}{service.cancel && <span className="inline-flex items-center gap-1 rounded-full bg-[#b698ff]/10 px-2.5 py-1 text-[10px] font-extrabold text-[#c5b6ff] ring-1 ring-inset ring-[#b698ff]/15"><ShieldCheck size={12} />{locale === 'ar' ? 'قابل للإلغاء' : 'Cancelable'}</span>}</div><h2 className="max-w-2xl text-base font-extrabold leading-6 text-white">{locale === 'ar' && service.nameAr ? service.nameAr : service.name}</h2><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-[#8e99b8]"><span className="mono">#{service.providerId}</span><span>{t.min}: <b className="text-[#bdc7e2]">{service.min?.toLocaleString()}</b></span><span>{t.max}: <b className="text-[#bdc7e2]">{service.max?.toLocaleString()}</b></span></div></div></div>
-              <div className="flex items-end justify-between gap-4 border-t border-white/[.06] pt-4 lg:items-center lg:border-s lg:border-t-0 lg:ps-6 lg:pt-0"><div className="text-start lg:text-end"><p className="mono text-2xl font-medium tracking-tight text-[#ffdc89]">${service.finalPricePerK?.toFixed(3)}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#7f8aa7]">{t.perThousand}</p></div><button onClick={() => { setOrder({ service, link: '', qty: String(service.min) }); setMsg(''); }} className="btn-primary whitespace-nowrap"><CircleDollarSign size={16} />{t.orderNow}</button></div>
+              <div className="flex items-end justify-between gap-4 border-t border-white/[.06] pt-4 lg:items-center lg:border-s lg:border-t-0 lg:ps-6 lg:pt-0"><div className="text-start lg:text-end"><p className="mono text-2xl font-medium tracking-tight text-[#ffdc89]">${Number(service.finalPricePerK ?? 0).toFixed(3)}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#7f8aa7]">{t.perThousand}</p></div><button onClick={() => { setOrder({ service, link: '', qty: String(service.min) }); setMsg(''); }} className="btn-primary whitespace-nowrap"><CircleDollarSign size={16} />{t.orderNow}</button></div>
             </div>
           </article>)}
         </section>
