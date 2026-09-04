@@ -119,6 +119,9 @@ export default function SectionServicesPage() {
   console.log('💳 Wallet balance:', walletBalance);
 
   const inputCopy = (service: any) => {
+    const providerInput = String(service?.requiredInput || service?.type || '').toLowerCase().trim();
+    if (providerInput === 'id') return { label: locale === 'ar' ? 'المعرّف (ID)' : 'ID', placeholder: locale === 'ar' ? 'أدخل المعرّف المطلوب' : 'Enter the required ID' };
+    if (providerInput === 'username') return { label: locale === 'ar' ? 'اسم المستخدم' : 'Username', placeholder: locale === 'ar' ? 'أدخل اسم المستخدم' : 'Enter username' };
     const descriptor = `${service?.type || ''} ${service?.name || ''}`.toLowerCase();
     if (/user.?id|account.?id|player.?id|\buid\b|\bid\b/.test(descriptor)) return { label: locale === 'ar' ? 'المعرّف (ID)' : 'ID', placeholder: locale === 'ar' ? 'أدخل المعرّف المطلوب' : 'Enter the required ID' };
     if (/username|user name/.test(descriptor)) return { label: locale === 'ar' ? 'اسم المستخدم' : 'Username', placeholder: locale === 'ar' ? 'أدخل اسم المستخدم' : 'Enter username' };

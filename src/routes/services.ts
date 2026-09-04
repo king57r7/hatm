@@ -65,6 +65,16 @@ function trimText(value: unknown, fallback = "", max = 500) {
   return typeof value === "string" ? value.trim().slice(0, max) : fallback;
 }
 
+function resolveRequiredInput(raw: any): string {
+  const explicit = [raw?.requiredInput, raw?.required_input, raw?.inputType, raw?.input_type, raw?.input, raw?.field, raw?.requires, raw?.targetType, raw?.target_type, raw?.type]
+    .filter(value => typeof value === "string").join(" ").toLowerCase();
+  if (raw?.requiresId === true || raw?.requires_id === true || raw?.userId === true || raw?.user_id === true) return "id";
+  if (raw?.requiresUsername === true || raw?.requires_username === true || raw?.username === true) return "username";
+  if (/user[ _-]?id|account[ _-]?id|player[ _-]?id|customer[ _-]?id|\buid\b/.test(explicit)) return "id";
+  if (/username|user name|handle/.test(explicit)) return "username";
+  return "link";
+}
+
 function normalizeProviderServices(rawServices: any[]): ProviderService[] {
   const uniqueServices = new Map<number, ProviderService>();
 
@@ -87,7 +97,8 @@ function normalizeProviderServices(rawServices: any[]): ProviderService[] {
       basePricePerK,
       refill: raw?.refill === true || raw?.refill === "true" || raw?.refill === 1 || raw?.refill === "1",
       cancel: raw?.cancel === true || raw?.cancel === "true" || raw?.cancel === 1 || raw?.cancel === "1",
-      type: trimText(raw?.type, "", 100) || null,
+      // Keep the provider's required target in a stable form for the customer form.
+      type: resolveRequiredInput(raw),
       imageUrl: safeRemoteUrl(raw?.imageUrl ?? raw?.image_url ?? raw?.image ?? raw?.picture ?? raw?.thumbnail),
     });
   }
